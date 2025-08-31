@@ -125,6 +125,20 @@ function App() {
   const [manualHistory, setManualHistory] = React.useState([]);
   const [selectedHistoryIds, setSelectedHistoryIds] = React.useState([]);
   const [classroomCount, setClassroomCount] = React.useState(16);
+  const [presetPath, setPresetPath] = React.useState("");
+
+  async function handleLoadPreset() {
+    if (!presetPath) return;
+    try {
+      const res = await fetch(presetPath);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      setRawCsv(text);
+      ingestCsv(text);
+    } catch (e) {
+      setMessage(`プリセット読込エラー: ${e.message || e}`);
+    }
+  }
   const fileRef = React.useRef(null);
 
   React.useEffect(() => { runInternalTests(); }, []);
@@ -400,6 +414,32 @@ function App() {
               onClick={handleLoadSample}
               type="button"
             >サンプルCSVを読み込む</button>
+
+
+   <select
+     className="border rounded-xl px-3 py-2 text-sm bg-white"
+     value={presetPath}
+     onChange={(e) => setPresetPath(e.target.value)}
+     title="事前用意したCSVを選択"
+   >
+     <option value="">プリセットCSVを選択</option>
+     <option value="./data/R606">小一</option>
+     <option value="./data/R608">小三</option>
+  　 <option value="./data/R610">小五</option>
+     <option value="./data/R611">小六</option>   
+     <option value="./data/R613">中二</option>
+     <option value="./data/R617">高三</option>
+   </select>
+   <button
+     className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
+     onClick={handleLoadPreset}
+     type="button"
+     disabled={!presetPath}
+   >選択したCSVを読み込む</button>
+    <button ... onClick={() => { if (rawCsv) ingestCsv(rawCsv); }} ...>CSVを再解析</button>
+  </div>
+
+            
             <button
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm"
               onClick={() => { if (rawCsv) ingestCsv(rawCsv); }}
