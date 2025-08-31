@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>クラスガチャ（CSV対応・日本語UI・React）</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React / ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      /* ==== あなたの JSX コードを統合 ==== */
+      /* ポイント:
+         1. `export default function App()` → `function App()`
+         2. import 文は不要（React/ReactDOMはCDNで読み込み済み）
+      */
+
+
+
+// -----------------------------
+// ユーティリティ
+// -----------------------------
+function csvParse(text) {
+  // シンプルかつ堅牢なCSVパーサ（カンマ区切り、クォート対応）
+  // タブ区切りも許容（"," または "\t"）
+  const sep = text.includes("\t") && !text.includes(",") ? "\t" : ",";
+  const rows = [];
+  let i = 0, field = "", inQuotes = false, row = [];
+  const pushField = () => { row.push(field); field = ""; };
+  const pushRow = () => { rows.push(row); row = []; };
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; } // エスケープ
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    } else {
+      if (c === '"') { inQuotes = true; i++; continue; }
+      if (c === sep) { pushField(); i++; continue; }
+      if (c === '\n') { pushField(); pushRow(); i++; continue; }
+      if (c === '\r') { // Windows系CRLF
+        if (text[i + 1] === '\n') { pushField(); pushRow(); i += 2; continue; }
+        pushField(); pushRow(); i++; continue;
+      }
+      field += c; i++; continue;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { pushField(); pushRow(); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ""));
+}
+
+function toNumberSafe(v) {
+  if (v == null) return NaN;
+  const s = String(v).trim().replace(/％|‰|%/g, "");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function randomInRange(min, max) { return min + Math.random() * (max - min); }
+function format1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+
+function rohrerIndex(heightCm, weightKg) {
+  // ローレル指数 = 体重(kg) ÷ 身長(cm)^3 × 10^7
+  return (weightKg / Math.pow(heightCm, 3)) * 1e7;
+}
+
+function rarityFromCellDisplay(cellDisplay) {
+  // セルの表示値に基づくレア度
+  // 0.7以上：表記なし
+  // 0.2～0.6：★
+  // 0.1：★★
+  // 0.1未満：★★★
+  if (cellDisplay === "-") return ""; // 出現しないが安全側
+  if (cellDisplay === "0.0") return "★★★"; // 0.1未満
+  const n = toNumberSafe(cellDisplay);
+  if (!Number.isFinite(n)) return "";
+  if (n >= 0.7) return "";
+  if (n >= 0.2 && n <= 0.6) return "★";
+  if (n === 0.1) return "★★";
+  if (n < 0.1) return "★★★";
+  return "";
+}
+
+// 0.0セルの割当計算（単体テスト可能な純粋関数）
+// 仕様: 既知合計(‰)と0.0セル数から、各0.0セルの割当‰を返す
+// ・理論合計は1000‰
+// ・均等配分。ただし 1セルあたりの最低値を 0.01‰ とする
+function computeZeroDotZeroWeight(knownSumPerMille, zeroDotZeroCount) {
+  if (!Number.isFinite(knownSumPerMille) || knownSumPerMille < 0) knownSumPerMille = 0;
+  if (!Number.isFinite(zeroDotZeroCount) || zeroDotZeroCount <= 0) return 0;
+  const theoretical = 1000;
+  const remainder = Math.max(0, theoretical - knownSumPerMille);
+  const even = remainder / zeroDotZeroCount;
+  const per = Math.max(0.01, even); // 最低 0.01‰ を保証
+  return per;
+}
+
+// 教室ガチャの人数を 2〜20 に丸める（純粋関数：テスト可能）
+function clampClassroomCount(n) {
+  const num = Math.floor(Number(n) || 0);
+  return Math.min(20, Math.max(2, num));
+}
+
+// 100名以上の女性名（漢字/かな混在）
+const FEMALE_NAMES = [
+  "葵","茜","明日香","彩","綾","あかね","あすか","あや","歩美","文","咲","桜","さくら","早苗","さなえ","沙耶","汐里","志穂","静香","しずか","渚","七海","奈々","なな","夏希","夏美","直子","なおこ","菜月","菜々子","成美","のぞみ","遥","はるか","春菜","陽菜","ひな","日菜子","日向","ひより","ひかり","光","美咲","美月","美穂","美和","瑞希","みずき","みどり","みなみ","実花","実里","みのり","美琴","美羽","美雨","芽衣","めい","桃","百花","百合","ゆり","優","優衣","優花","夕菜","結衣","結","結愛","ゆあ","由衣","唯","唯奈","由佳","由香","由美","友香","友里","友美","梨花","凛","りん","鈴","涼","涼子","りょう","玲","怜","麗","れい","怜奈","澪","みお","美緒","萌","桃子","麻衣","舞","真央","真奈","真菜美","真由","真理","万里","万由","真琴","真希","真弓","栞","しおり","志保","詩織","聖","聖奈","清美","清香","佳奈","佳苗","香苗","香織","かおり","香澄","かすみ","楓","かえで","花","花音","華","華子","葉月","遥香","晴香","陽子","陽未","陽向","小春","心愛","ここあ","心音","心美","小百合","紗季","紗耶香","紗月","さつき","沙羅","白雪","千夏","千尋","千鶴","智子","智美","智香","知里","知美","知佳","弥生","弓香","由宇","有栖","ありす","亜衣","愛","あい","愛花","愛美","藍","藍子","亜美","彩乃","彩花","彩香","彩芽","杏","あん","杏奈","杏子","杏里","遙","里奈","りな","莉子","りこ","莉央","莉緒","梨央","梨緒","璃子","瑠璃","瑛美","映美","絵里","恵","恵美","英里","直美","直実","奈緒","夏海","望","ののか","穂香","ほのか","穂乃果","澄玲","朱里","朱音"
+];
+
+// サンプルCSV（最小動作確認用）。ユーザーCSVの形式に準拠。
+const SAMPLE_CSV = `身長×体重,30,35,40,45,50
+140,0.1,0.2,0.7,-,0.0
+145,0.0,0.1,0.5,0.2,0.1
+150,-,0.0,0.3,0.6,0.1
+155,0.0,0.0,0.2,0.6,0.2
+160,0.0,-,0.1,0.6,0.3`;
+
+// -----------------------------
+// メインアプリ
+// -----------------------------
+function App() {
+  const [rawCsv, setRawCsv] = useState("");
+  const [table, setTable] = useState(null); // { heights: number[], weights: number[], cells: {display:string}[][] }
+  const [message, setMessage] = useState("");
+  const [results, setResults] = useState([]); // 抽選結果
+
+  // 並び替え（ソート）: key: '', 'height', 'weight', 'rohrer' / order: 'desc' | 'asc'
+  const [sortKey, setSortKey] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  // 手入力フォーム（結果に手動追加）
+  const [manualName, setManualName] = useState("");
+  const [manualHeight, setManualHeight] = useState("");
+  const [manualWeight, setManualWeight] = useState("");
+
+  // 手入力履歴（リロードで消える簡易メモリ保持）
+  const [manualHistory, setManualHistory] = useState([]);
+  // 選択された履歴 ID を保持
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState([]);
+  // 教室ガチャの人数（2〜20）
+  const [classroomCount, setClassroomCount] = useState(16);
+
+  const fileRef = useRef(null);
+
+  // ---- 開発者用テスト（簡易）: 画面読み込み時に実行 ----
+  useEffect(() => { runInternalTests(); }, []);
+
+  const meta = useMemo(() => {
+    if (!table) return null;
+    let knownSum = 0; // 数値表示0.1以上の合計
+    let zeroDotZeroCount = 0; // "0.0" カウント
+
+    for (let r = 0; r < table.cells.length; r++) {
+      for (let c = 0; c < table.cells[r].length; c++) {
+        const disp = table.cells[r][c].display;
+        if (disp === "-") continue;
+        if (disp === "0.0") { zeroDotZeroCount++; continue; }
+        const val = toNumberSafe(disp);
+        if (Number.isFinite(val)) knownSum += val;
+      }
+    }
+    const perZeroDotZero = computeZeroDotZeroWeight(knownSum, zeroDotZeroCount);
+    const sumIfAssigned = knownSum + perZeroDotZero * zeroDotZeroCount;
+
+    return { knownSum, zeroDotZeroCount, perZeroDotZero, sumIfAssigned };
+  }, [table]);
+
+  const weightedItems = useMemo(() => {
+    if (!table || !meta) return [];
+    const items = [];
+    for (let ri = 0; ri < table.heights.length; ri++) {
+      for (let ci = 0; ci < table.weights.length; ci++) {
+        const cell = table.cells[ri][ci];
+        const disp = cell.display;
+        if (disp === "-") continue; // 出現しない
+        let w;
+        if (disp === "0.0") {
+          w = meta.perZeroDotZero; // 差分均等配分＋最低0.01‰を保証
+        } else {
+          const n = toNumberSafe(disp);
+          if (!Number.isFinite(n) || n <= 0) continue;
+          w = n;
+        }
+        if (w > 0) {
+          items.push({
+            rIndex: ri,
+            cIndex: ci,
+            weightPerMille: w, // ‰のまま保持
+            displayValue: disp
+          });
+        }
+      }
+    }
+    return items;
+  }, [table, meta]);
+
+  const totalWeight = useMemo(() => weightedItems.reduce((a, b) => a + b.weightPerMille, 0), [weightedItems]);
+
+  // 表示用の並び替え済み配列
+  const displayedResults = useMemo(() => {
+    const withIndex = results.map((r, i) => ({ ...r, _genIndex: i }));
+    if (!sortKey) return withIndex; // 生成順のまま
+    const getter = (x) => sortKey === 'height' ? x.height : (sortKey === 'weight' ? x.weight : x.rohrer);
+    return [...withIndex].sort((a, b) => {
+      const va = getter(a);
+      const vb = getter(b);
+      return sortOrder === 'desc' ? vb - va : va - vb;
+    });
+  }, [results, sortKey, sortOrder]);
+
+  function pickOne() {
+    if (!table) { setMessage("CSVを読み込んでください。"); return null; }
+    if (weightedItems.length === 0) { setMessage("抽選可能なセルがありません。"); return null; }
+
+    // 重みは‰だが、相対値としてそのまま使う
+    const threshold = Math.random() * totalWeight;
+    let acc = 0;
+    let chosen = weightedItems[0];
+    for (const item of weightedItems) {
+      acc += item.weightPerMille;
+      if (threshold <= acc) { chosen = item; break; }
+    }
+
+    const heightClass = table.heights[chosen.rIndex];
+    const weightClass = table.weights[chosen.cIndex];
+
+    const hMin = heightClass - 0.9, hMax = heightClass; // [x.1, x.0]
+    const wMin = weightClass - 0.9, wMax = weightClass;
+    const height = Number(format1(randomInRange(hMin, hMax)));
+    const weight = Number(format1(randomInRange(wMin, wMax)));
+
+    const rohrer = rohrerIndex(height, weight);
+    const rarity = rarityFromCellDisplay(chosen.displayValue);
+    const name = FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
+
+    return {
+      name,
+      height,
+      weight,
+      rohrer: Number(format1(rohrer)),
+      rarity,
+      heightClass,
+      weightClass,
+      cellDisplay: chosen.displayValue
+    };
+  }
+
+  function runGacha(times) {
+    const tmp = [];
+    for (let i = 0; i < times; i++) {
+      const one = pickOne();
+      if (one) tmp.push(one);
+    }
+    if (tmp.length > 0) setResults(tmp);
+  }
+
+  // 指定の値が属するクラスのインデックスを返す（[x-0.9, x]）
+  function findClassIndex(values, v) {
+    if (!Array.isArray(values)) return -1;
+    for (let i = 0; i < values.length; i++) {
+      const cls = values[i];
+      if (v >= cls - 0.9 - 1e-9 && v <= cls + 1e-9) return i;
+    }
+    return -1;
+  }
+
+  // 手入力データを結果に追加
+  function addManualEntry() {
+    if (!table) { setMessage("CSVを読み込んでください。"); return; }
+    const h = Number(manualHeight);
+    const w = Number(manualWeight);
+    if (!Number.isFinite(h) || !Number.isFinite(w)) { setMessage("身長・体重は数値で入力してください。"); return; }
+    if (h <= 0 || w <= 0) { setMessage("身長・体重は正の数で入力してください。"); return; }
+
+    const ri = findClassIndex(table.heights, h);
+    const ci = findClassIndex(table.weights, w);
+
+    let cellDisplay = "-";
+    let rarity = "";
+    if (ri >= 0 && ci >= 0) {
+      const disp = table.cells[ri][ci]?.display ?? "-";
+      cellDisplay = disp;
+      rarity = rarityFromCellDisplay(disp);
+    }
+
+    const name = manualName?.trim() || "手入力";
+    const rohrer = Number(format1(rohrerIndex(h, w)));
+
+    const entry = {
+      _id: Date.now() + ":" + Math.random().toString(36).slice(2, 8),
+      name,
+      height: Number(format1(h)),
+      weight: Number(format1(w)),
+      rohrer,
+      rarity,
+      heightClass: ri >= 0 ? table.heights[ri] : undefined,
+      weightClass: ci >= 0 ? table.weights[ci] : undefined,
+      cellDisplay
+    };
+
+    setResults(prev => [...prev, entry]);
+    setManualHistory(prev => [entry, ...prev]); // 履歴は新しい順で先頭
+
+    setMessage("手入力データを追加しました。");
+  }
+
+  function addSelectedHistoryToResults() {
+    if (selectedHistoryIds.length === 0) { setMessage("履歴が選択されていません。"); return; }
+    const selected = manualHistory.filter(r => selectedHistoryIds.includes(r._id));
+    if (selected.length === 0) { setMessage("有効な選択がありません。"); return; }
+    setResults(prev => [...prev, ...selected]);
+    setMessage(`${selected.length} 件の履歴を結果に追加しました。`);
+    setSelectedHistoryIds([]);
+  }
+
+  function toggleHistorySelection(id) {
+    setSelectedHistoryIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  function clearSelectedHistory() {
+    if (selectedHistoryIds.length === 0) {
+      setMessage("履歴が選択されていません。");
+      return;
+    }
+    setManualHistory(prev => prev.filter(r => !selectedHistoryIds.includes(r._id)));
+    setSelectedHistoryIds([]);
+    setMessage("選択した履歴をクリアしました。");
+  }
+
+  function handleLoadSample() {
+    setRawCsv(SAMPLE_CSV);
+    ingestCsv(SAMPLE_CSV);
+  }
+
+  function handleFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result || "");
+      setRawCsv(text);
+      ingestCsv(text);
+    };
+    reader.readAsText(f);
+  }
+
+  function ingestCsv(text) {
+    try {
+      const rows = csvParse(text);
+      if (rows.length < 2) throw new Error("ヘッダー行＋データ行が必要です");
+
+      // 1行目: ウェイト（体重）ヘッダー
+      const header = rows[0];
+      // 先頭セルはラベル、以降が体重クラス
+      const weightLabels = header.slice(1).map(toNumberSafe).filter(Number.isFinite);
+      if (weightLabels.length === 0) throw new Error("体重のヘッダーがありません");
+
+      const heights = [];
+      const cells = [];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.length === 0) continue;
+        const h = toNumberSafe(row[0]);
+        if (!Number.isFinite(h)) continue; // ラベル行などはスキップ
+        heights.push(h);
+        const rowCells = [];
+        for (let j = 1; j < row.length; j++) {
+          const raw = String(row[j]).trim();
+          // 許容: 数値(例: "0.3"), "0.0", "-"
+          if (raw === "-") { rowCells.push({ display: "-" }); continue; }
+          if (raw === "0.0") { rowCells.push({ display: "0.0" }); continue; }
+          const n = toNumberSafe(raw);
+          if (Number.isFinite(n)) {
+            const disp = n <= 0 ? "-" : String(n);
+            rowCells.push({ display: disp });
+          } else {
+            rowCells.push({ display: "-" });
+          }
+        }
+        while (rowCells.length < weightLabels.length) rowCells.push({ display: "-" });
+        rowCells.length = weightLabels.length;
+        cells.push(rowCells);
+      }
+
+      setTable({ heights, weights: weightLabels, cells });
+      setResults([]);
+      setMessage("CSVを読み込みました。");
+    } catch (err) {
+      console.error(err);
+      setMessage(`CSV読込エラー: ${err.message || err}`);
+      setTable(null);
+      setResults([]);
+    }
+  }
+
+  function clearResults() { setResults([]); }
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="text-2xl font-bold">クラスガチャ</div>
+          <div className="text-xs text-slate-500">（CSV対応・ローレル指数自動計算・日本語UI）</div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto p-4 space-y-6">
+        {/* データの読み込み */}
+        <section className="bg-white rounded-2xl shadow p-4 space-y-4">
+          <h2 className="text-lg font-semibold">データの読み込み</h2>
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFile}
+              className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-700"
+            />
+            <button
+              className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm"
+              onClick={handleLoadSample}
+              type="button"
+            >サンプルCSVを読み込む</button>
+            <button
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm"
+              onClick={() => { if (rawCsv) ingestCsv(rawCsv); }}
+              type="button"
+            >CSVを再解析</button>
+          </div>
+
+          <details className="text-sm text-slate-600">
+            <summary className="cursor-pointer select-none py-1">CSVフォーマットの説明（クリックで開く）</summary>
+            <div className="mt-2 space-y-2">
+              <p>・1行目は体重クラスのヘッダー。先頭セルはラベル、以降が <code>35,40,45</code> のような数値。</p>
+              <p>・2行目以降は、先頭セルに身長クラス（例：<code>140</code>）を記載。続くセルは各セルの頻度（‰）。</p>
+              <p>・値は <code>0.1</code> や <code>0.6</code> のような数値、<code>0.0</code>、または <code>-</code>（ゼロ）を使用できます。</p>
+              <p>・<code>0.0</code> は 0 &lt; 頻度 &lt; 0.1‰ を表します。抽選用の重みは理論合計(1000‰)との差分を <strong>0.0 セルで均等配分</strong>し、さらに <strong>各0.0セルに最低 0.01‰</strong> を保証します。</p>
+              <p>・クラス幅の解釈：<code>140</code> → [139.1cm, 140.0cm]、<code>35</code> → [34.1kg, 35.0kg]</p>
+            </div>
+          </details>
+
+          {message && (
+            <div className="text-sm text-slate-700 bg-slate-100 rounded-xl px-3 py-2 inline-block">{message}</div>
+          )}
+
+          {table && (
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <div className="bg-slate-50 rounded-2xl p-3 border">
+                <div className="text-slate-500">行（身長クラス）</div>
+                <div className="text-xl font-semibold">{table.heights.length} 行</div>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-3 border">
+                <div className="text-slate-500">列（体重クラス）</div>
+                <div className="text-xl font-semibold">{table.weights.length} 列</div>
+              </div>
+              <div className="bg-slate-50 rounded-2xl p-3 border">
+                <div className="text-slate-500">抽選用 合計‰</div>
+                <div className="text-xl font-semibold">{format1(totalWeight)}</div>
+                {meta && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    既知合計: {format1(meta.knownSum)}‰ / 0.0セル: {meta.zeroDotZeroCount} / 0.0配分: {format1(meta.perZeroDotZero)}‰/セル
+                    {meta.sumIfAssigned > 1000 && (
+                      <span className="ml-2 inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800">合計が1000‰を超過（最低0.01‰保証のため）</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ガチャ */}
+        <section className="bg-white rounded-2xl shadow p-4 space-y-4">
+          <h2 className="text-lg font-semibold">ガチャ</h2>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* 教室人数の選択（2〜20） */}
+            <label className="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 border rounded-xl px-3 py-2">
+              <span>教室人数</span>
+              <input
+                type="number"
+                min={2}
+                max={20}
+                step={1}
+                value={classroomCount}
+                onChange={(e) => setClassroomCount(clampClassroomCount(e.target.value))}
+                className="w-16 border rounded-md px-2 py-1 text-right"
+                title="教室ガチャで生成する人数（2〜20）"
+              />
+              <span className="text-slate-500">人</span>
+            </label>
+
+            <button
+              className="px-5 py-3 rounded-2xl bg-rose-600 text-white font-bold hover:bg-rose-700"
+              onClick={() => runGacha(1)}
+              type="button"
+              disabled={!table}
+              title="1回抽選"
+            >1回ガチャ</button>
+
+            <button
+              className="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700"
+              onClick={() => runGacha(clampClassroomCount(classroomCount))}
+              type="button"
+              disabled={!table}
+              title={`${clampClassroomCount(classroomCount)}人を一括生成`}
+            >教室ガチャ（{clampClassroomCount(classroomCount)}人分）</button>
+
+            <button
+              className="px-4 py-2 rounded-2xl bg-slate-200 hover:bg-slate-300"
+              onClick={clearResults}
+              type="button"
+            >結果をクリア</button>
+          </div>
+
+          {/* 手入力で結果に追加 */}
+          <div className="mt-3 grid sm:grid-cols-3 gap-3">
+            <div className="col-span-3 text-slate-700 text-sm font-medium">手入力で結果に追加</div>
+            <input
+              type="text"
+              className="border rounded-xl px-3 py-2"
+              placeholder="名前（省略可: 手入力）"
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+            />
+            <input
+              type="number"
+              min="1"
+              step="0.1"
+              className="border rounded-xl px-3 py-2"
+              placeholder="身長 (cm) 例: 152.4"
+              value={manualHeight}
+              onChange={(e) => setManualHeight(e.target.value)}
+            />
+            <input
+              type="number"
+              min="1"
+              step="0.1"
+              className="border rounded-xl px-3 py-2"
+              placeholder="体重 (kg) 例: 43.0"
+              value={manualWeight}
+              onChange={(e) => setManualWeight(e.target.value)}
+            />
+            <div className="col-span-3">
+              <button
+                type="button"
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+                onClick={addManualEntry}
+                disabled={!table}
+                title="入力した数値で1行追加"
+              >この内容を結果に追加</button>
+              <div className="text-xs text-slate-500 mt-2">
+                ※ 手入力した身長・体重が頻度表のクラスに該当する場合は、そのセル表示とレア度を付与します。該当しない場合はセル表示「-」／レア度なしで追加されます。
+              </div>
+            </div>
+          </div>
+
+          <details className="text-sm text-slate-600">
+            <summary className="cursor-pointer select-none py-1">レア度の基準</summary>
+            <div className="mt-2">
+              <ul className="list-disc pl-6 space-y-1">
+                <li>0.7‰ 以上：レア度表記なし（一般的）</li>
+                <li>0.2～0.6‰：<span className="font-semibold">★</span>（目安：11%）</li>
+                <li>0.1‰：<span className="font-semibold">★★</span>（目安：2%）</li>
+                <li>0.1‰ 未満：<span className="font-semibold">★★★</span>（目安：0.9%）</li>
+              </ul>
+              <p className="text-xs text-slate-500 mt-1">※ レア度は <strong>セルの‰表示</strong> を用います。<code>0.0</code> は 0.1‰ 未満として扱います。</p>
+            </div>
+          </details>
+        </section>
+
+        {/* 結果 */}
+        <section className="bg-white rounded-2xl shadow p-0 overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-lg font-semibold">結果（健康診断表風）</h2>
+            <div className="flex items-center gap-2 text-sm">
+              <label className="text-slate-600">並び替え:</label>
+              <select
+                className="border rounded-lg px-2 py-1 bg-white"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+                title="並び替えの対象"
+              >
+                <option value="">生成順のまま</option>
+                <option value="height">身長（cm）</option>
+                <option value="weight">体重（kg）</option>
+                <option value="rohrer">ローレル指数</option>
+              </select>
+              <select
+                className="border rounded-lg px-2 py-1 bg-white"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                title="高い順・低い順"
+                disabled={!sortKey}
+              >
+                <option value="desc">高い順</option>
+                <option value="asc">低い順</option>
+              </select>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="text-left px-3 py-2 font-semibold border-b">No.</th>
+                  <th className="text-left px-3 py-2 font-semibold border-b">名前</th>
+                  <th className="text-right px-3 py-2 font-semibold border-b">身長 (cm)</th>
+                  <th className="text-right px-3 py-2 font-semibold border-b">体重 (kg)</th>
+                  <th className="text-right px-3 py-2 font-semibold border-b">ローレル指数</th>
+                  <th className="text-center px-3 py-2 font-semibold border-b">レア度</th>
+                  <th className="text-center px-3 py-2 font-semibold border-b text-slate-500">セル表示</th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedResults.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center text-slate-500 py-8">
+                      まだ結果がありません。CSVを読み込み、ガチャを回してください。
+                    </td>
+                  </tr>
+                ) : (
+                  displayedResults.map((r, idx) => (
+                    <tr key={r._genIndex ?? r._id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                      <td className="px-3 py-2 border-b">{idx + 1}</td>
+                      <td className="px-3 py-2 border-b font-medium">{r.name}</td>
+                      <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.height)}</td>
+                      <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.weight)}</td>
+                      <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.rohrer)}</td>
+                      <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{r.rarity}</td>
+                      <td className="px-3 py-2 border-b text-center text-slate-500">{r.cellDisplay}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 手入力履歴（セッション内保持／リロードで消えます） */}
+        <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-lg font-semibold">手入力履歴</h2>
+            <div className="flex gap-2">
+              <button
+                className="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm"
+                onClick={addSelectedHistoryToResults}
+                disabled={selectedHistoryIds.length === 0}
+              >選択した履歴を結果に追加</button>
+              <button
+                className="px-3 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-sm"
+                onClick={clearSelectedHistory}
+                disabled={selectedHistoryIds.length === 0}
+              >選択した履歴をクリア</button>
+            </div>
+          </div>
+          {manualHistory.length === 0 ? (
+            <div className="text-sm text-slate-500">履歴はまだありません。</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-xs">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-2 py-1 border-b">選択</th>
+                    <th className="text-left px-2 py-1 border-b">No.</th>
+                    <th className="text-left px-2 py-1 border-b">名前</th>
+                    <th className="text-right px-2 py-1 border-b">身長</th>
+                    <th className="text-right px-2 py-1 border-b">体重</th>
+                    <th className="text-right px-2 py-1 border-b">ローレル指数</th>
+                    <th className="text-center px-2 py-1 border-b">セル表示</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {manualHistory.map((r, i) => (
+                    <tr key={r._id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50"}>
+                      <td className="px-2 py-1 border-b text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedHistoryIds.includes(r._id)}
+                          onChange={() => toggleHistorySelection(r._id)}
+                        />
+                      </td>
+                      <td className="px-2 py-1 border-b">{i + 1}</td>
+                      <td className="px-2 py-1 border-b">{r.name}</td>
+                      <td className="px-2 py-1 border-b text-right">{format1(r.height)}</td>
+                      <td className="px-2 py-1 border-b text-right">{format1(r.weight)}</td>
+                      <td className="px-2 py-1 border-b text-right">{format1(r.rohrer)}</td>
+                      <td className="px-2 py-1 border-b text-center text-slate-500">{r.cellDisplay}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* データプレビュー（任意） */}
+        {table && (
+          <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+            <h2 className="text-lg font-semibold">読み込んだ頻度表（‰）</h2>
+            <div className="overflow-x-auto">
+              <table className="text-xs border min-w-full">
+                <thead>
+                  <tr>
+                    <th className="border px-2 py-1 bg-slate-100 text-left">身長×体重</th>
+                    {table.weights.map((w, i) => (
+                      <th key={i} className="border px-2 py-1 bg-slate-100 text-right">{w}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.heights.map((h, ri) => (
+                    <tr key={ri}>
+                      <td className="border px-2 py-1 bg-slate-50 text-right font-medium">{h}</td>
+                      {table.cells[ri].map((c, ci) => (
+                        <td
+                          key={ci}
+                          className={`border px-2 py-1 text-right tabular-nums ${c.display === '-' ? 'text-slate-400' : ''}`}
+                        >
+                          {c.display}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        <section className="text-xs text-slate-500 leading-6">
+          <p>・本アプリは統計的頻度表に基づくフィクション生成です。個人の実在性はありません。</p>
+          <p>・ブラウザ上だけで動作し、macOS（Chrome）やXcodeの簡易Webホストでも実行可能です。</p>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// -----------------------------
+// 簡易テスト（ランタイム）
+// -----------------------------
+function runInternalTests() {
+  const results = [];
+  const pass = (name) => results.push({ name, ok: true });
+  const fail = (name, msg) => results.push({ name, ok: false, msg });
+  const nearly = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
+
+  try {
+    // Test 1: rohrerIndex（既知値近傍）
+    const r = rohrerIndex(140.0, 40.0); // ≈ 145.79
+    if (nearly(r, 145.79, 0.2)) pass("rohrerIndex basic"); else fail("rohrerIndex basic", `got ${r}`);
+
+    // Test 2: rarity
+    if (rarityFromCellDisplay('-') === "") pass("rarity '-'=blank"); else fail("rarity '-'", "");
+    if (rarityFromCellDisplay('0.0') === "★★★") pass("rarity 0.0"); else fail("rarity 0.0", "");
+    if (rarityFromCellDisplay('0.7') === "") pass("rarity 0.7"); else fail("rarity 0.7", "");
+    if (rarityFromCellDisplay('0.2') === "★") pass("rarity 0.2"); else fail("rarity 0.2", "");
+    if (rarityFromCellDisplay('0.1') === "★★") pass("rarity 0.1"); else fail("rarity 0.1", "");
+    if (rarityFromCellDisplay('0.09') === "★★★") pass("rarity 0.09"); else fail("rarity 0.09", "");
+
+    // Test 3: csvParse 基本
+    const csvA = 'H,W\n140,30\n';
+    const parsedA = csvParse(csvA);
+    if (Array.isArray(parsedA) && parsedA.length === 2 && parsedA[1][0] === '140') pass("csvParse basic"); else fail("csvParse basic", JSON.stringify(parsedA));
+
+    // Test 4: 並び替えロジック
+    const dummy = [
+      { height: 150, weight: 45, rohrer: 130 },
+      { height: 140, weight: 35, rohrer: 128 },
+      { height: 160, weight: 50, rohrer: 160 },
+    ];
+    const sortFn = (arr, key, order) => {
+      const getter = (x) => key === 'height' ? x.height : (key === 'weight' ? x.weight : x.rohrer);
+      return [...arr].sort((a, b) => order === 'desc' ? getter(b) - getter(a) : getter(a) - getter(b));
+    };
+    const byHDesc = sortFn(dummy, 'height', 'desc');
+    const byHAsc = sortFn(dummy, 'height', 'asc');
+    if (byHDesc[0].height === 160 && byHAsc[0].height === 140) pass("sort by height"); else fail("sort by height", JSON.stringify({ byHDesc, byHAsc }));
+
+    // Test 5: 0.0セル最低0.01‰保証
+    const per1 = computeZeroDotZeroWeight(999.5, 100); // remainder=0.5 → even=0.005 → min=0.01
+    if (nearly(per1, 0.01)) pass("0.0最小0.01‰: boost"); else fail("0.0最小0.01‰: boost", per1);
+    const per2 = computeZeroDotZeroWeight(990, 100); // remainder=10 → even=0.1 → keep=0.1
+    if (nearly(per2, 0.1)) pass("0.0最小0.01‰: keep"); else fail("0.0最小0.01‰: keep", per2);
+
+    // Test 6: 手入力→クラス照合
+    const classes = [140, 145, 150];
+    const idxA = (function(values, v){ for (let i=0;i<values.length;i++){ const cls=values[i]; if (v>=cls-0.9-1e-9 && v<=cls+1e-9) return i; } return -1; })(classes, 144.5);
+    if (idxA === 1) pass("manual class match"); else fail("manual class match", idxA);
+
+    // Test 7: 0.0セル数0のときの割当=0
+    const per3 = computeZeroDotZeroWeight(500, 0);
+    if (per3 === 0) pass("zero 0.0 cells => 0"); else fail("zero 0.0 cells => 0", per3);
+
+    // Test 8: clampClassroomCount（2〜20に丸める）
+    if (clampClassroomCount(1) === 2 && clampClassroomCount(21) === 20 && clampClassroomCount(16.9) === 16) {
+      pass("clampClassroomCount bounds");
+    } else {
+      fail("clampClassroomCount bounds", `${clampClassroomCount(1)},${clampClassroomCount(21)},${clampClassroomCount(16.9)}`);
+    }
+  } catch (e) {
+    console.error("テスト中に例外", e);
+  } finally {
+    const okAll = results.every(r => r.ok);
+    const prefix = okAll ? "✅" : "❌";
+    console.log(prefix + " 内部テスト結果:");
+    results.forEach(r => {
+      if (r.ok) console.log("  PASS:", r.name);
+      else console.warn("  FAIL:", r.name, r.msg || "");
+    });
+  }
+}
+
+
+      // React 18 のマウント
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
