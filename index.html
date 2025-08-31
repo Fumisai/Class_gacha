@@ -423,12 +423,12 @@ function App() {
      title="事前用意したCSVを選択"
    >
      <option value="">プリセットCSVを選択</option>
-     <option value="./folder/R606">小一</option>
-     <option value="./folder/R608">小三</option>
-  　 <option value="./folder/R610">小五</option>
-     <option value="./folder/R611">小六</option>   
-     <option value="./folder/R613">中二</option>
-     <option value="./folder/R617">高三</option>
+     <option value="./folder/R606.csv">小一</option>
+     <option value="./folder/R608.csv">小三</option>
+     <option value="./folder/R610.csv">小五</option>
+     <option value="./folder/R611.csv">小六</option>
+     <option value="./folder/R613.csv">中二</option>
+     <option value="./folder/R617.csv">高三</option>
    </select>
    <button
      className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
@@ -436,10 +436,6 @@ function App() {
      type="button"
      disabled={!presetPath}
    >選択したCSVを読み込む</button>
-    <button ... onClick={() => { if (rawCsv) ingestCsv(rawCsv); }} ...>CSVを再解析</button>
-  </div>
-
-            
             <button
               className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm"
               onClick={() => { if (rawCsv) ingestCsv(rawCsv); }}
