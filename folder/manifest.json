@@ -1,7 +1,7 @@
 {
   "2018": [
     { "label": "小一", "path": "./data/2018/R606.csv" },
-    { "label": "小三", "path": "./data/2018/R608.csv" }
+    { "label": "高三", "path": "./data/2018/H3017.csv" }
   ],
   "2024": [
     { "label": "小一", "path": "./data/2024/R606.csv" },
