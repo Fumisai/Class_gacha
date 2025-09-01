@@ -1,0 +1,20 @@
+{
+  "2018": [
+    { "label": "小一", "path": "./data/2018/R606.csv" },
+    { "label": "小三", "path": "./data/2018/R608.csv" }
+  ],
+  "2024": [
+    { "label": "小一", "path": "./data/2024/R606.csv" },
+    { "label": "小二", "path": "./data/2024/R607.csv" },
+    { "label": "小三", "path": "./data/2024/R608.csv" },
+    { "label": "小四", "path": "./data/2024/R609.csv" },   
+    { "label": "小五", "path": "./data/2024/R610.csv" },
+    { "label": "小六", "path": "./data/2024/R611.csv" },
+    { "label": "中一", "path": "./data/2024/R612.csv" },
+    { "label": "中二", "path": "./data/2024/R613.csv" },
+    { "label": "中三", "path": "./data/2024/R614.csv" },
+    { "label": "高一", "path": "./data/2024/R615.csv" },
+    { "label": "高二", "path": "./data/2024/R616.csv" },
+    { "label": "高三", "path": "./data/2024/R617.csv" }
+  ]
+}
