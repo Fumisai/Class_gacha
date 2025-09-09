@@ -459,7 +459,7 @@ function App() {
   }
   // 四捨五入して整数に
   const query = `${Math.round(h)}cm ${Math.round(w)}kg`;
-  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  const url = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(query)}`;
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
