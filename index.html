@@ -449,6 +449,21 @@ function App() {
 
   function clearResults() { setResults([]); }
 
+  function openGoogleFor(hw) {
+  // hw: { height: number, weight: number, name?: string }
+  const h = Number(hw.height);
+  const w = Number(hw.weight);
+  if (!Number.isFinite(h) || !Number.isFinite(w)) {
+    setMessage("検索できる数値がありません。");
+    return;
+  }
+  // 形式: "131.8cm 26.2kg"
+  const query = `${format1(h)}cm ${format1(w)}kg`;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b">
@@ -697,6 +712,7 @@ function App() {
                   <th className="text-right px-3 py-2 font-semibold border-b">ローレル指数</th>
                   <th className="text-center px-3 py-2 font-semibold border-b">レア度</th>
                   <th className="text-center px-3 py-2 font-semibold border-b text-slate-500">セル表示</th>
+                  <th className="text-center px-3 py-2 font-semibold border-b">検索</th>
                 </tr>
               </thead>
               <tbody>
@@ -716,6 +732,15 @@ function App() {
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.rohrer)}</td>
                       <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{r.rarity}</td>
                       <td className="px-3 py-2 border-b text-center text-slate-500">{r.cellDisplay}</td>
+                       <td className="px-3 py-2 border-b text-center">
+                         <button
+                           type="button"
+                           className="px-3 py-1 rounded-lg bg-slate-900 text-white text-xs hover:bg-slate-700"
+                           onClick={() => openGoogleFor(r)}
+                           title="(身長cm 体重kg) でGoogle検索"
+                           >
+                           Googleで検索+     </button>
+                       </td>
                     </tr>
                   ))
                 )}
