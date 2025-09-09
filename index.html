@@ -457,8 +457,8 @@ function App() {
     setMessage("検索できる数値がありません。");
     return;
   }
-  // 形式: "131.8cm 26.2kg"
-  const query = `${format1(h)}cm ${format1(w)}kg`;
+  // 四捨五入して整数に
+  const query = `${Math.round(h)}cm ${Math.round(w)}kg`;
   const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   window.open(url, "_blank", "noopener,noreferrer");
 }
