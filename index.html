@@ -1090,8 +1090,8 @@ function runInternalTests() {
     const per3 = computeZeroDotZeroWeight(500, 0);
     if (per3 === 0) pass("zero 0.0 cells => 0"); else fail("zero 0.0 cells => 0", per3);
 
-    // Test 8: clampClassroomCount（2〜20に丸める）
-    if (clampClassroomCount(1) === 2 && clampClassroomCount(21) === 20 && clampClassroomCount(16.9) === 16) {
+    // Test 8: clampClassroomCount（1〜40に丸める）
+    if (clampClassroomCount(0) === 1 && clampClassroomCount(41) === 40 && clampClassroomCount(16.9) === 16) {
       pass("clampClassroomCount bounds");
     } else {
       fail("clampClassroomCount bounds", `${clampClassroomCount(1)},${clampClassroomCount(21)},${clampClassroomCount(16.9)}`);
