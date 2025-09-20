@@ -1243,6 +1243,43 @@ function runInternalTests() {
     } else {
       fail("clampClassroomCount bounds", `${clampClassroomCount(1)},${clampClassroomCount(21)},${clampClassroomCount(16.9)}`);
     }
+    // Test 9: 男女データが両方ある場合 → female+maleに分配される
+{
+  const dummyFemale = { gender: "female", heights:[150], weights:[40], cells:[[ { display:"1.0" } ]] };
+  const dummyMale   = { gender: "male", heights:[160], weights:[50], cells:[[ { display:"1.0" } ]] };
+  const tblBoth = { female: dummyFemale, male: dummyMale };
+  const used = new Set();
+  const oneF = pickOneFromTable(tblBoth.female, "female", used);
+  const oneM = pickOneFromTable(tblBoth.male, "male", used);
+  if (oneF?.gender === "female" && oneM?.gender === "male") {
+    pass("男女両方テスト");
+  } else {
+    fail("男女両方テスト", JSON.stringify({ oneF, oneM }));
+  }
+}
+
+// Test 10: 女子だけ → gender=female
+{
+  const tblFemaleOnly = { gender:"female", heights:[150], weights:[40], cells:[[ { display:"1.0" } ]] };
+  const one = pickOneFromTable(tblFemaleOnly, "female", new Set());
+  if (one?.gender === "female") {
+    pass("女子のみテスト");
+  } else {
+    fail("女子のみテスト", JSON.stringify(one));
+  }
+}
+
+// Test 11: 男子だけ → gender=male
+{
+  const tblMaleOnly = { gender:"male", heights:[160], weights:[50], cells:[[ { display:"1.0" } ]] };
+  const one = pickOneFromTable(tblMaleOnly, "male", new Set());
+  if (one?.gender === "male") {
+    pass("男子のみテスト");
+  } else {
+    fail("男子のみテスト", JSON.stringify(one));
+  }
+}
+
   } catch (e) {
     console.error("テスト中に例外", e);
   } finally {
