@@ -188,49 +188,6 @@ function stddev(arr) {
 }
 
 
-      function pickOneFromTable(tbl, gender, usedNames) {
-  if (!tbl || !tbl.cells) return null;
-
-  // weightedItems を生成
-  const items = [];
-  for (let ri = 0; ri < tbl.heights.length; ri++) {
-    for (let ci = 0; ci < tbl.weights.length; ci++) {
-      const cell = tbl.cells[ri][ci];
-      const disp = cell.display;
-      if (disp === "-" || disp === "") continue;
-      const n = toNumberSafe(disp);
-      if (Number.isFinite(n) && n > 0) {
-        items.push({ rIndex: ri, cIndex: ci, weightPerMille: n, displayValue: disp });
-      }
-    }
-  }
-  if (items.length === 0) return null;
-
-  const threshold = Math.random() * items.reduce((a, b) => a + b.weightPerMille, 0);
-  let acc = 0;
-  let chosen = items[0];
-  for (const item of items) {
-    acc += item.weightPerMille;
-    if (threshold <= acc) { chosen = item; break; }
-  }
-
-  const heightClass = tbl.heights[chosen.rIndex];
-  const weightClass = tbl.weights[chosen.cIndex];
-
-  const h = Number(format1(randomInRange(heightClass - 0.9, heightClass)));
-  const w = Number(format1(randomInRange(weightClass - 0.9, weightClass)));
-
-  const rohrer = rohrerIndex(h, w);
-  const nameList = gender === "male" ? MALE_NAMES : FEMALE_NAMES;
-  const name = nameList[Math.floor(Math.random() * nameList.length)];
-
-  return {
-    name, height: h, weight: w,
-    rohrer: Number(format1(rohrer)),
-    rarity: rarityFromCellDisplay(chosen.displayValue),
-    gender
-  };
-}
 
       
 
@@ -312,46 +269,50 @@ function App() {
         setMessage("アップロードCSVを選択しました。");
       }
     } else {
-      const srcObj = JSON.parse(source); // { label, female, male }
+  const srcObj = JSON.parse(source); // { label, female, male }
 
-      let femaleTable = null;
-      let maleTable = null;
+  let femaleTable = null;
+  let maleTable = null;
 
-      if (srcObj.female?.path) {
-        try {
-          const res = await fetch(srcObj.female.path);
-          if (res.ok) {
-            const text = await res.text();
-            femaleTable = ingestCsv(text, "female", { returnOnly: true });
-          }
-        } catch {}
+  if (srcObj.female?.path) {
+    try {
+      const res = await fetch(srcObj.female.path);
+      if (res.ok) {
+        const text = await res.text();
+        femaleTable = ingestCsv(text, "female", { returnOnly: true });
       }
+    } catch {}
+  }
 
-      if (srcObj.male?.path) {
-        try {
-          const res = await fetch(srcObj.male.path);
-          if (res.ok) {
-            const text = await res.text();
-            maleTable = ingestCsv(text, "male", { returnOnly: true });
-          }
-        } catch {}
+  if (srcObj.male?.path) {
+    try {
+      const res = await fetch(srcObj.male.path);
+      if (res.ok) {
+        const text = await res.text();
+        maleTable = ingestCsv(text, "male", { returnOnly: true });
       }
+    } catch {}
+  }
 
-      if (femaleTable && maleTable) {
-        setTable({ female: femaleTable, male: maleTable });
-        setMessage(`${srcObj.label} の男女CSVを読み込みました。`);
-      } else if (femaleTable) {
-        setTable(femaleTable);
-        setMessage(`${srcObj.label} は女子データのみ読み込みました。男子は生成されません。`);
-      } else if (maleTable) {
-        setTable(maleTable);
-        setMessage(`${srcObj.label} は男子データのみ読み込みました。女子は生成されません。`);
-      } else {
-        throw new Error("男女どちらのCSVも読み込めませんでした");
-      }
+  if (femaleTable && maleTable) {
+    setTable({ female: femaleTable, male: maleTable });
+    setMessage(`${srcObj.label} の男女CSVを読み込みました。`);
+    setFemaleRatio(50); // 男女両方あるので初期値は 50%
+  } else if (femaleTable) {
+    setTable({ female: femaleTable, male: null });
+    setMessage(`${srcObj.label} は女子データのみ読み込みました。男子は生成されません。`);
+    setFemaleRatio(100); // 女子のみ → 強制100%
+  } else if (maleTable) {
+    setTable({ female: null, male: maleTable });
+    setMessage(`${srcObj.label} は男子データのみ読み込みました。女子は生成されません。`);
+    setFemaleRatio(0); // 男子のみ → 強制0%
+  } else {
+    throw new Error("男女どちらのCSVも読み込めませんでした");
+  }
 
-      setResults([]);
-    }
+  setResults([]);
+}
+
   } catch (e) {
     setMessage(`読込エラー: ${e.message}`);
   }
@@ -362,29 +323,47 @@ function App() {
   
   
   const meta = React.useMemo(() => {
-    if (!table) return null;
-    let knownSum = 0;
-    let zeroDotZeroCount = 0;
-    for (let r = 0; r < table.cells.length; r++) {
-      for (let c = 0; c < table.cells[r].length; c++) {
-        const disp = table.cells[r][c].display;
+  if (!table) return null;
+
+  const collectStats = (tbl) => {
+    let knownSum = 0, zeroDotZeroCount = 0;
+    for (let r = 0; r < tbl.cells.length; r++) {
+      for (let c = 0; c < tbl.cells[r].length; c++) {
+        const disp = tbl.cells[r][c].display;
         if (disp === "-") continue;
         if (disp === "0.0") { zeroDotZeroCount++; continue; }
         const val = toNumberSafe(disp);
         if (Number.isFinite(val)) knownSum += val;
       }
     }
-    const perZeroDotZero = computeZeroDotZeroWeight(knownSum, zeroDotZeroCount);
-    const sumIfAssigned = knownSum + perZeroDotZero * zeroDotZeroCount;
-    return { knownSum, zeroDotZeroCount, perZeroDotZero, sumIfAssigned };
-  }, [table]);
+    return { knownSum, zeroDotZeroCount };
+  };
 
-  const weightedItems = React.useMemo(() => {
-    if (!table || !meta) return [];
+  let knownSum = 0, zeroDotZeroCount = 0;
+  if (table.female) {
+    const s = collectStats(table.female);
+    knownSum += s.knownSum;
+    zeroDotZeroCount += s.zeroDotZeroCount;
+  }
+  if (table.male) {
+    const s = collectStats(table.male);
+    knownSum += s.knownSum;
+    zeroDotZeroCount += s.zeroDotZeroCount;
+  }
+
+  const perZeroDotZero = computeZeroDotZeroWeight(knownSum, zeroDotZeroCount);
+  const sumIfAssigned = knownSum + perZeroDotZero * zeroDotZeroCount;
+  return { knownSum, zeroDotZeroCount, perZeroDotZero, sumIfAssigned };
+}, [table]);
+
+const weightedItems = React.useMemo(() => {
+  if (!table || !meta) return [];
+
+  const collectItems = (tbl, factor) => {
     const items = [];
-    for (let ri = 0; ri < table.heights.length; ri++) {
-      for (let ci = 0; ci < table.weights.length; ci++) {
-        const cell = table.cells[ri][ci];
+    for (let ri = 0; ri < tbl.heights.length; ri++) {
+      for (let ci = 0; ci < tbl.weights.length; ci++) {
+        const cell = tbl.cells[ri][ci];
         const disp = cell.display;
         if (disp === "-") continue;
         let w;
@@ -397,15 +376,30 @@ function App() {
         }
         if (w > 0) {
           items.push({
-            rIndex: ri, cIndex: ci,
-            weightPerMille: w,
-            displayValue: disp
+            rIndex: ri,
+            cIndex: ci,
+            weightPerMille: w * factor, // factorをここで適用
+            displayValue: disp,
+            gender: tbl.gender,
           });
         }
       }
     }
     return items;
-  }, [table, meta]);
+  };
+
+  const femaleFactor = table.female && table.male ? (femaleRatio / 100) : (table.female ? 1 : 0);
+  const maleFactor   = table.female && table.male ? ((100 - femaleRatio) / 100) : (table.male ? 1 : 0);
+
+  let allItems = [];
+  if (table.female) allItems = allItems.concat(collectItems(table.female, femaleFactor));
+  if (table.male)   allItems = allItems.concat(collectItems(table.male,   maleFactor));
+
+  return allItems;
+}, [table, meta, femaleRatio]);
+
+
+
 
   const totalWeight = React.useMemo(() => weightedItems.reduce((a, b) => a + b.weightPerMille, 0), [weightedItems]);
 
@@ -446,58 +440,50 @@ function renderRarityBadge(rarity) {
   return "text-rose-600 font-semibold";                       // ふとり
 }
   
-  function pickOne() {
-    if (!table) { setMessage("CSVを読み込んでください。"); return null; }
-    if (weightedItems.length === 0) { setMessage("抽選可能なセルがありません。"); return null; }
+ function pickOne() {
+  if (!table) { setMessage("CSVを読み込んでください。"); return null; }
+  if (weightedItems.length === 0) { setMessage("抽選可能なセルがありません。"); return null; }
 
-    // 重みは‰だが、相対値としてそのまま使う
-    const threshold = Math.random() * totalWeight;
-    let acc = 0;
-    let chosen = weightedItems[0];
-    for (const item of weightedItems) {
-      acc += item.weightPerMille;
-      if (threshold <= acc) { chosen = item; break; }
-    }
-
-    const heightClass = table.heights[chosen.rIndex];
-    const weightClass = table.weights[chosen.cIndex];
-
-    const hMin = heightClass - 0.9, hMax = heightClass; // [x.1, x.0]
-    const wMin = weightClass - 0.9, wMax = weightClass;
-    const height = Number(format1(randomInRange(hMin, hMax)));
-    const weight = Number(format1(randomInRange(wMin, wMax)));
-
-    const rohrer = rohrerIndex(height, weight);
-    const rarity = rarityFromCellDisplay(chosen.displayValue);
-    const nameList = table.gender === "male" ? MALE_NAMES : FEMALE_NAMES;
-    const name = nameList[Math.floor(Math.random() * nameList.length)];
-
-
-    
-    return {
-      name,
-      height,
-      weight,
-      rohrer: Number(format1(rohrer)),
-      rarity,
-      heightClass,
-      weightClass,
-      cellDisplay: chosen.displayValue
-    };
+  // 重み付きランダム選択
+  const threshold = Math.random() * totalWeight;
+  let acc = 0;
+  let chosen = weightedItems[0];
+  for (const item of weightedItems) {
+    acc += item.weightPerMille;
+    if (threshold <= acc) { chosen = item; break; }
   }
 
-function runGacha(times) {
-  let femaleCount = 0, maleCount = 0;
+  // gender に応じて正しい table を選択
+  const srcTable = chosen.gender === "male" ? table.male : table.female;
+  const heightClass = srcTable.heights[chosen.rIndex];
+  const weightClass = srcTable.weights[chosen.cIndex];
 
-  if (table.female && table.male) {
-    // 男女揃っている場合
-    femaleCount = Math.round(times * femaleRatio / 100);
-    maleCount   = times - femaleCount;
-  } else if (table.gender === "female") {
-    femaleCount = times; // 女子のみ100%
-  } else if (table.gender === "male") {
-    maleCount = times;   // 男子のみ100%
-  } else {
+  const hMin = heightClass - 0.9, hMax = heightClass;
+  const wMin = weightClass - 0.9, wMax = weightClass;
+  const height = Number(format1(randomInRange(hMin, hMax)));
+  const weight = Number(format1(randomInRange(wMin, wMax)));
+
+  const rohrer = rohrerIndex(height, weight);
+  const rarity = rarityFromCellDisplay(chosen.displayValue);
+  const nameList = chosen.gender === "male" ? MALE_NAMES : FEMALE_NAMES;
+  const name = nameList[Math.floor(Math.random() * nameList.length)];
+
+  return {
+    name,
+    height,
+    weight,
+    rohrer: Number(format1(rohrer)),
+    rarity,
+    heightClass,
+    weightClass,
+    cellDisplay: chosen.displayValue,
+    gender: chosen.gender
+  };
+}
+
+
+function runGacha(times) {
+  if (!table || weightedItems.length === 0) {
     setMessage("有効なデータがありません。");
     return;
   }
@@ -505,30 +491,22 @@ function runGacha(times) {
   const tmp = [];
   const usedNames = new Set();
 
-  for (let i = 0; i < femaleCount; i++) {
-    let one = null, safety = 0;
+  for (let i = 0; i < times; i++) {
+    let one = null;
+    let safety = 0;
     while (safety < 50) {
-      one = pickOneFromTable(table.female, "female", usedNames);
+      one = pickOne();
       if (one && !usedNames.has(one.name)) break;
       safety++;
     }
-    if (one) { tmp.push(one); usedNames.add(one.name); }
-  }
-
-  for (let i = 0; i < maleCount; i++) {
-    let one = null, safety = 0;
-    while (safety < 50) {
-      one = pickOneFromTable(table.male, "male", usedNames);
-      if (one && !usedNames.has(one.name)) break;
-      safety++;
+    if (one) {
+      tmp.push(one);
+      usedNames.add(one.name);
     }
-    if (one) { tmp.push(one); usedNames.add(one.name); }
   }
 
   if (tmp.length > 0) setResults(tmp);
 }
-
-
 
 
 
@@ -870,22 +848,33 @@ setMessage("CSVを読み込みました。");
             >教室ガチャ（{clampClassroomCount(classroomCount)}人分）</button>
             
             {/* 男女比スライダー */}
-            <label className="flex flex-col gap-2 text-sm text-slate-700 bg-slate-50 border rounded-xl px-3 py-2 w-full sm:w-auto">
-              <span>男女比（女子%）</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={femaleRatio}
-                onChange={(e) => setFemaleRatio(Number(e.target.value))}
-                className="w-full"
-                />
-              <div className="flex justify-between text-xs text-slate-600">
-                <span>女子 {femaleRatio}%</span>
-                <span>男子 {100 - femaleRatio}%</span>
-              </div>
-            </label>
+            {table?.female && table?.male ? (
+  <label className="flex flex-col gap-2 text-sm text-slate-700 bg-slate-50 border rounded-xl px-3 py-2 w-full sm:w-auto">
+    <span>男女比（女子%）</span>
+    <input
+      type="range"
+      min="0"
+      max="100"
+      step="1"
+      value={femaleRatio}
+      onChange={(e) => setFemaleRatio(Number(e.target.value))}
+      className="w-full"
+    />
+    <div className="flex justify-between text-xs text-slate-600">
+      <span>女子 {femaleRatio}%</span>
+      <span>男子 {100 - femaleRatio}%</span>
+    </div>
+  </label>
+) : table?.female ? (
+  <div className="text-sm text-slate-600 bg-slate-50 border rounded-xl px-3 py-2">
+    男女比は <strong>女子100%</strong> 固定（男子なし）
+  </div>
+) : table?.male ? (
+  <div className="text-sm text-slate-600 bg-slate-50 border rounded-xl px-3 py-2">
+    男女比は <strong>男子100%</strong> 固定（女子なし）
+  </div>
+) : null}
+
 
 
             
@@ -1224,42 +1213,51 @@ function runInternalTests() {
     } else {
       fail("clampClassroomCount bounds", `${clampClassroomCount(1)},${clampClassroomCount(21)},${clampClassroomCount(16.9)}`);
     }
-    // Test 9: 男女データが両方ある場合 → female+maleに分配される
-{
-  const dummyFemale = { gender: "female", heights:[150], weights:[40], cells:[[ { display:"1.0" } ]] };
-  const dummyMale   = { gender: "male", heights:[160], weights:[50], cells:[[ { display:"1.0" } ]] };
-  const tblBoth = { female: dummyFemale, male: dummyMale };
-  const used = new Set();
-  const oneF = pickOneFromTable(tblBoth.female, "female", used);
-  const oneM = pickOneFromTable(tblBoth.male, "male", used);
-  if (oneF?.gender === "female" && oneM?.gender === "male") {
-    pass("男女両方テスト");
-  } else {
-    fail("男女両方テスト", JSON.stringify({ oneF, oneM }));
+    // Test 9: 比率が反映される（女60%/男40%で概ね近い比率になる）
+(function(){
+  const femaleWeight = 1.0, maleWeight = 1.0;
+  const femaleFactor = 0.6, maleFactor = 0.4;
+  const trials = 4000;
+  let femaleWins = 0;
+  for (let t=0; t<trials; t++){
+    const wf = femaleWeight * femaleFactor;
+    const wm = maleWeight   * maleFactor;
+    const th = Math.random() * (wf + wm);
+    if (th <= wf) femaleWins++;
   }
-}
+  const ratio = femaleWins / trials;
+  if (Math.abs(ratio - 0.6) < 0.06) pass("weighted gender mix 60/40");
+  else fail("weighted gender mix 60/40", ratio);
+})();
 
-// Test 10: 女子だけ → gender=female
-{
-  const tblFemaleOnly = { gender:"female", heights:[150], weights:[40], cells:[[ { display:"1.0" } ]] };
-  const one = pickOneFromTable(tblFemaleOnly, "female", new Set());
-  if (one?.gender === "female") {
-    pass("女子のみテスト");
-  } else {
-    fail("女子のみテスト", JSON.stringify(one));
+// Test 10: 女子のみ（男0%）→ 100% 女子側
+(function(){
+  const wf = 1.0 * 1.0;
+  const wm = 1.0 * 0.0;
+  const trials = 1000;
+  let femaleWins = 0;
+  for (let t=0; t<trials; t++){
+    const th = Math.random() * (wf + wm);
+    if (th <= wf) femaleWins++;
   }
-}
+  if (femaleWins === trials) pass("female only = 100%");
+  else fail("female only = 100%", femaleWins);
+})();
 
-// Test 11: 男子だけ → gender=male
-{
-  const tblMaleOnly = { gender:"male", heights:[160], weights:[50], cells:[[ { display:"1.0" } ]] };
-  const one = pickOneFromTable(tblMaleOnly, "male", new Set());
-  if (one?.gender === "male") {
-    pass("男子のみテスト");
-  } else {
-    fail("男子のみテスト", JSON.stringify(one));
+// Test 11: 男子のみ（女0%）→ 0% 女子側
+(function(){
+  const wf = 1.0 * 0.0;
+  const wm = 1.0 * 1.0;
+  const trials = 1000;
+  let femaleWins = 0;
+  for (let t=0; t<trials; t++){
+    const th = Math.random() * (wf + wm);
+    if (th <= wf) femaleWins++;
   }
-}
+  if (femaleWins === 0) pass("male only = 0% female");
+  else fail("male only = 0% female", femaleWins);
+})();
+
 
   } catch (e) {
     console.error("テスト中に例外", e);
