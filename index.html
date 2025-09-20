@@ -144,6 +144,41 @@ const SAMPLE_CSV = `身長×体重,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,
 135,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0.0 `;
 
 // -----------------------------
+// 統計用ユーティリティ関数
+function mean(arr) {
+  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : NaN;
+}
+
+function median(arr) {
+  if (arr.length === 0) return NaN;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+function mode(arr) {
+  if (arr.length === 0) return NaN;
+  const freq = new Map();
+  for (const v of arr) freq.set(v, (freq.get(v) || 0) + 1);
+  let max = 0, modeVal = arr[0];
+  for (const [v, count] of freq.entries()) {
+    if (count > max) { max = count; modeVal = v; }
+  }
+  return modeVal;
+}
+
+function stddev(arr) {
+  if (arr.length === 0) return NaN;
+  const m = mean(arr);
+  const variance = mean(arr.map(x => (x - m) ** 2));
+  return Math.sqrt(variance);
+}
+
+      
+
+// -----------------------------
 // メインアプリ
 // -----------------------------
 function App() {
@@ -520,7 +555,37 @@ function runGacha(times) {
   }
 
   function clearResults() { setResults([]); }
+  
+    const stats = React.useMemo(() => {
+    if (displayedResults.length === 0) return null;
+    const heights = displayedResults.map(r => r.height);
+    const weights = displayedResults.map(r => r.weight);
+    const rohrers = displayedResults.map(r => r.rohrer);
 
+    return {
+      height: {
+        mean: mean(heights),
+        median: median(heights),
+        mode: mode(heights),
+        stddev: stddev(heights),
+      },
+      weight: {
+        mean: mean(weights),
+        median: median(weights),
+        mode: mode(weights),
+        stddev: stddev(weights),
+      },
+      rohrer: {
+        mean: mean(rohrers),
+        median: median(rohrers),
+        mode: mode(rohrers),
+        stddev: stddev(rohrers),
+      }
+    };
+  }, [displayedResults]);
+
+  
+  
   function openGoogleFor(hw) {
   // hw: { height: number, weight: number, name?: string }
   const h = Number(hw.height);
@@ -826,6 +891,26 @@ function runGacha(times) {
           </div>
         </section>
 
+       {stats && (
+      <section className="bg-white rounded-2xl shadow p-4 space-y-4">
+        <h2 className="text-lg font-semibold">教室の統計</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {["height","weight","rohrer"].map((key) => (
+        <div key={key} className="bg-slate-50 rounded-xl p-3 border">
+          <div className="font-medium mb-2">
+            {key === "height" ? "身長 (cm)" : key === "weight" ? "体重 (kg)" : "ローレル指数"}
+          </div>
+          <div>平均: {format1(stats[key].mean)}</div>
+          <div>中央値: {format1(stats[key].median)}</div>
+          <div>最頻値: {format1(stats[key].mode)}</div>
+          <div>標準偏差: {format1(stats[key].stddev)}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
+        
         {/* 手入力履歴（セッション内保持／リロードで消えます） */}
         <section className="bg-white rounded-2xl shadow p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
