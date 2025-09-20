@@ -23,7 +23,7 @@
       "label": "小四",
       "female": { "path": "./folder/2024/R609_f.csv", "gender": "female" },
       "male":   { "path": "./folder/2024/R609_m.csv", "gender": "male" }
-    }
+    },
     {
       "label": "小五",
       "female": { "path": "./folder/2024/R10_f.csv", "gender": "female" },
