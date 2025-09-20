@@ -887,28 +887,37 @@ function runGacha(times) {
                   ))
                 )}
               </tbody>
+              {stats && (
+      <tfoot className="bg-slate-100 text-xs">
+    <tr>
+      <td className="px-3 py-2 border-t text-right font-semibold" colSpan={2}>平均</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.height.mean)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.weight.mean)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.rohrer.mean)}</td>
+      <td colSpan={3} className="border-t"></td>
+    </tr>
+    <tr>
+      <td className="px-3 py-2 border-t text-right font-semibold" colSpan={2}>中央値</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.height.median)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.weight.median)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.rohrer.median)}</td>
+      <td colSpan={3} className="border-t"></td>
+    </tr>
+    <tr>
+      <td className="px-3 py-2 border-t text-right font-semibold" colSpan={2}>標準偏差</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.height.stddev)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.weight.stddev)}</td>
+      <td className="px-3 py-2 border-t text-right">{format1(stats.rohrer.stddev)}</td>
+      <td colSpan={3} className="border-t"></td>
+    </tr>
+  </tfoot>
+)}
+
             </table>
           </div>
         </section>
 
-       {stats && (
-      <section className="bg-white rounded-2xl shadow p-4 space-y-4">
-        <h2 className="text-lg font-semibold">教室の統計</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          {["height","weight","rohrer"].map((key) => (
-        <div key={key} className="bg-slate-50 rounded-xl p-3 border">
-          <div className="font-medium mb-2">
-            {key === "height" ? "身長 (cm)" : key === "weight" ? "体重 (kg)" : "ローレル指数"}
-          </div>
-          <div>平均: {format1(stats[key].mean)}</div>
-          <div>中央値: {format1(stats[key].median)}</div>
-          <div>最頻値: {format1(stats[key].mode)}</div>
-          <div>標準偏差: {format1(stats[key].stddev)}</div>
-        </div>
-      ))}
-    </div>
-  </section>
-)}
+      
 
         
         {/* 手入力履歴（セッション内保持／リロードで消えます） */}
