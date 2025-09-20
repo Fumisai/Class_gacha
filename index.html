@@ -262,6 +262,24 @@ function App() {
     });
   }, [results, sortKey, sortOrder]);
 
+function renderRarityBadge(rarity) {
+    if (!rarity) return <span className="text-slate-400">—</span>;
+    const color =
+      rarity === "★"   ? "text-amber-600" :
+      rarity === "★★"  ? "text-rose-600"  :
+      rarity === "★★★" ? "text-indigo-600" :
+                        "text-slate-700";
+    return (
+      <span
+      className={`font-semibold ${color}`}
+      title={`レア度 ${rarity}`}
+      aria-label={`レア度 ${rarity.length} つ`}
+      >
+        {rarity}
+      </span>
+    );
+  }
+  
   function pickOne() {
     if (!table) { setMessage("CSVを読み込んでください。"); return null; }
     if (weightedItems.length === 0) { setMessage("抽選可能なセルがありません。"); return null; }
@@ -286,24 +304,6 @@ function App() {
     const rohrer = rohrerIndex(height, weight);
     const rarity = rarityFromCellDisplay(chosen.displayValue);
     const name = FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
-
-  function renderRarityBadge(rarity) {
-    if (!rarity) return <span className="text-slate-400">—</span>;
-    const color =
-      rarity === "★"   ? "text-amber-600" :
-      rarity === "★★"  ? "text-rose-600"  :
-      rarity === "★★★" ? "text-indigo-600" :
-                        "text-slate-700";
-    return (
-      <span
-      className={`font-semibold ${color}`}
-      title={`レア度 ${rarity}`}
-      aria-label={`レア度 ${rarity.length} つ`}
-      >
-        {rarity}
-      </span>
-    );
-  }
 
     
     return {
