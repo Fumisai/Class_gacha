@@ -299,19 +299,7 @@ function App() {
 
 
 
-  async function handleLoad() {
-  try {
-    if (source === "sample") {
-      ingestCsv(SAMPLE_CSV);
-      setMessage("サンプルCSVを読み込みました。");
-    } else if (source === "upload") {
-      if (!fileRef.current?.files?.[0]) {
-        setMessage("CSVファイルを選択してください。");
-      } else {
-        setMessage("アップロードCSVを選択しました。");
-      }
-    } else {
-  const srcObj = JSON.parse(source); // { label, female, male }
+  
  async function handleLoad() {
   try {
     if (source === "sample") {
