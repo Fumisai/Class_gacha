@@ -187,6 +187,51 @@ function stddev(arr) {
   return Math.sqrt(variance);
 }
 
+
+      function pickOneFromTable(tbl, gender, usedNames) {
+  if (!tbl || !tbl.cells) return null;
+
+  // weightedItems を生成
+  const items = [];
+  for (let ri = 0; ri < tbl.heights.length; ri++) {
+    for (let ci = 0; ci < tbl.weights.length; ci++) {
+      const cell = tbl.cells[ri][ci];
+      const disp = cell.display;
+      if (disp === "-" || disp === "") continue;
+      const n = toNumberSafe(disp);
+      if (Number.isFinite(n) && n > 0) {
+        items.push({ rIndex: ri, cIndex: ci, weightPerMille: n, displayValue: disp });
+      }
+    }
+  }
+  if (items.length === 0) return null;
+
+  const threshold = Math.random() * items.reduce((a, b) => a + b.weightPerMille, 0);
+  let acc = 0;
+  let chosen = items[0];
+  for (const item of items) {
+    acc += item.weightPerMille;
+    if (threshold <= acc) { chosen = item; break; }
+  }
+
+  const heightClass = tbl.heights[chosen.rIndex];
+  const weightClass = tbl.weights[chosen.cIndex];
+
+  const h = Number(format1(randomInRange(heightClass - 0.9, heightClass)));
+  const w = Number(format1(randomInRange(weightClass - 0.9, weightClass)));
+
+  const rohrer = rohrerIndex(h, w);
+  const nameList = gender === "male" ? MALE_NAMES : FEMALE_NAMES;
+  const name = nameList[Math.floor(Math.random() * nameList.length)];
+
+  return {
+    name, height: h, weight: w,
+    rohrer: Number(format1(rohrer)),
+    rarity: rarityFromCellDisplay(chosen.displayValue),
+    gender
+  };
+}
+
       
 
 // -----------------------------
@@ -209,7 +254,7 @@ function App() {
   const [manifest, setManifest] = React.useState({});
   const [yearKey, setYearKey] = React.useState("");
   const [source, setSource] = React.useState("");
-
+  const [femaleRatio, setFemaleRatio] = React.useState(50); // 初期値 50%: 男女半々
 
  // ページ読込時に manifest.json を取得
   React.useEffect(() => {
@@ -266,14 +311,27 @@ function App() {
         setMessage("アップロードCSVを選択しました。");
       }
     } else {
-      // JSON.parse で gender を含めて取り出す
-      const srcObj = JSON.parse(source); // { label, path, gender }
-      const res = await fetch(srcObj.path);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      ingestCsv(text, srcObj.gender);  // gender を渡す
-      setMessage(`${srcObj.label} (${srcObj.gender}) を読み込みました。`);
-    }
+  const srcObj = JSON.parse(source); // { label, female, male }
+  const [femaleRes, maleRes] = await Promise.all([
+    fetch(srcObj.female.path),
+    fetch(srcObj.male.path)
+  ]);
+  if (!femaleRes.ok || !maleRes.ok) throw new Error("CSV取得失敗");
+
+  const [femaleCsv, maleCsv] = await Promise.all([
+    femaleRes.text(),
+    maleRes.text()
+  ]);
+
+  const femaleTable = ingestCsv(femaleCsv, "female", { returnOnly: true });
+  const maleTable   = ingestCsv(maleCsv, "male", { returnOnly: true });
+
+  setTable({ female: femaleTable, male: maleTable });
+  setResults([]);
+  setMessage(`${srcObj.label} の男女CSVを読み込みました。`);
+}
+
+
   } catch (e) {
     setMessage(`読込エラー: ${e.message}`);
   }
@@ -408,25 +466,41 @@ function renderRarityBadge(rarity) {
   }
 
 function runGacha(times) {
+  if (!table?.female || !table?.male) {
+    setMessage("男女両方のCSVを読み込んでください。");
+    return;
+  }
+
+  const femaleCount = Math.round(times * femaleRatio / 100);
+  const maleCount   = times - femaleCount;
+
   const tmp = [];
   const usedNames = new Set();
 
-  for (let i = 0; i < times; i++) {
-    let one = null;
-    let safety = 0; // 無限ループ防止
+  for (let i = 0; i < femaleCount; i++) {
+    let one = null, safety = 0;
     while (safety < 50) {
-      one = pickOne();
+      one = pickOneFromTable(table.female, "female", usedNames);
       if (one && !usedNames.has(one.name)) break;
       safety++;
     }
-    if (one) {
-      tmp.push(one);
-      usedNames.add(one.name);
+    if (one) { tmp.push(one); usedNames.add(one.name); }
+  }
+
+  for (let i = 0; i < maleCount; i++) {
+    let one = null, safety = 0;
+    while (safety < 50) {
+      one = pickOneFromTable(table.male, "male", usedNames);
+      if (one && !usedNames.has(one.name)) break;
+      safety++;
     }
+    if (one) { tmp.push(one); usedNames.add(one.name); }
   }
 
   if (tmp.length > 0) setResults(tmp);
 }
+
+
 
 
   // 指定の値が属するクラスのインデックスを返す（[x-0.9, x]）
@@ -519,9 +593,9 @@ function runGacha(times) {
     reader.readAsText(f);
   }
 
-  function ingestCsv(text, gender="female") {
-    try {
-      const rows = csvParse(text);
+  function ingestCsv(text, gender="female", opts={}) {
+  try {
+    const rows = csvParse(text);
       if (rows.length < 2) throw new Error("ヘッダー行＋データ行が必要です");
 
       // 1行目: ウェイト（体重）ヘッダー
@@ -557,14 +631,14 @@ function runGacha(times) {
         cells.push(rowCells);
       }
 
-      setTable({ heights, weights: weightLabels, cells, gender });
-      setResults([]);
-      setMessage("CSVを読み込みました。");
-    } catch (err) {
-      console.error(err);
-      setMessage(`CSV読込エラー: ${err.message || err}`);
-      setTable(null);
-      setResults([]);
+      setTable(parsed);
+    setResults([]);
+    setMessage("CSVを読み込みました。");
+  } catch (err) {
+    if (opts.returnOnly) throw err; // 呼び出し元にエラーを投げる
+    setMessage(`CSV読込エラー: ${err.message || err}`);
+    setTable(null);
+    setResults([]);
     }
   }
 
@@ -641,11 +715,12 @@ function runGacha(times) {
   <optgroup key={y} label={`${y}年度`}>
     {(manifest[y] || []).map((f, i) => (
       <option key={i} value={JSON.stringify(f)}>
-        {f.label}
+        {f.label}（男女ペア）
       </option>
     ))}
   </optgroup>
 ))}
+
 
     </select>
 
@@ -734,9 +809,8 @@ function runGacha(times) {
                 <input
                   type="number"
                   inputMode="numeric"
-                  min={2}
-                  max={20}
-                  step={1}
+                  min={1}
+                  max={40}
                   value={classroomCount}
                   onChange={(e) => setClassroomCount(clampClassroomCount(e.target.value))}
                   className="w-16 border rounded-md px-2 py-1 text-center"
@@ -750,7 +824,7 @@ function runGacha(times) {
               </div>
             </label>
 
-
+            
             <button
               className="px-5 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700"
               onClick={() => runGacha(clampClassroomCount(classroomCount))}
@@ -758,6 +832,25 @@ function runGacha(times) {
               disabled={!table}
               title={`${clampClassroomCount(classroomCount)}人を一括生成`}
             >教室ガチャ（{clampClassroomCount(classroomCount)}人分）</button>
+            
+            {/* 男女比スライダー */}
+            <label className="flex flex-col gap-2 text-sm text-slate-700 bg-slate-50 border rounded-xl px-3 py-2 w-full sm:w-auto">
+              <span>男女比（女子%）</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={femaleRatio}
+                onChange={(e) => setFemaleRatio(Number(e.target.value))}
+                className="w-full"
+                />
+              <div className="flex justify-between text-xs text-slate-600">
+                <span>女子 {femaleRatio}%</span>
+                <span>男子 {100 - femaleRatio}%</span>
+              </div>
+            </label>
+
 
             
 
@@ -926,7 +1019,6 @@ function runGacha(times) {
     </tr>
   </tfoot>
 )}
-
             </table>
           </div>
         </section>
