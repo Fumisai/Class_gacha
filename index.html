@@ -312,14 +312,13 @@ function renderRarityBadge(rarity) {
   }
   
   // 体格判定関数
-  function rohrerCategory(rohrer) {
-  if (rohrer < 100) return { label: "かなりやせ", color: "text-sky-600" };
-  if (rohrer < 115) return { label: "やせ", color: "text-teal-600" };
-  if (rohrer < 145) return { label: "", color: "" };
-  if (rohrer < 160) return { label: "ふとり", color: "text-amber-600" };
-  return { label: "ふとりすぎ", color: "text-rose-600" };
+  function rohrerCategoryColor(rohrer) {
+  if (rohrer < 100) return "text-sky-600 font-semibold";      // かなりやせ
+  if (rohrer < 115) return "text-teal-600 font-semibold";     // やせ
+  if (rohrer < 145) return "text-emerald-600 font-semibold";  // 標準
+  if (rohrer < 160) return "text-amber-600 font-semibold";    // ややふとり
+  return "text-rose-600 font-semibold";                       // ふとり
 }
-
   
   function pickOne() {
     if (!table) { setMessage("CSVを読み込んでください。"); return null; }
@@ -787,7 +786,6 @@ function runGacha(times) {
                   <th className="text-right px-3 py-2 font-semibold border-b">体重 (kg)</th>
                   <th className="text-right px-3 py-2 font-semibold border-b">ローレル指数</th>
                   <th className="text-center px-3 py-2 font-semibold border-b">レア度</th>
-                  <th className="text-center px-3 py-2 font-semibold border-b">体格</th>
                   <th className="text-center px-3 py-2 font-semibold border-b text-slate-500">セル表示</th>
                   <th className="text-center px-3 py-2 font-semibold border-b">検索</th>
                 </tr>
@@ -806,13 +804,10 @@ function runGacha(times) {
                       <td className="px-3 py-2 border-b font-medium">{r.name}</td>
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.height)}</td>
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.weight)}</td>
-                      <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.rohrer)}</td>
-                      <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{renderRarityBadge(r.rarity)}</td>
-                      <td className="px-3 py-2 border-b text-center">{(() => {
-                      const cat = rohrerCategory(r.rohrer);
-                      return <span className={`font-semibold ${cat.color}`}>{cat.label}</span>;
-                    })()}
+                      <td className={`px-3 py-2 border-b text-right tabular-nums ${rohrerCategoryColor(r.rohrer)}`}>
+                        {format1(r.rohrer)}
                       </td>
+                      <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{renderRarityBadge(r.rarity)}</td>
                       <td className="px-3 py-2 border-b text-center text-slate-500">{r.cellDisplay}</td>
                       <td className="px-3 py-2 border-b text-center">
                          <button
