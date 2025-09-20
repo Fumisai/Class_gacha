@@ -599,17 +599,29 @@ function renderRarityBadge(rarity) {
             {/* 教室人数の選択（2〜20） */}
             <label className="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 border rounded-xl px-3 py-2">
               <span>教室人数</span>
-              <input
-                type="number"
-                min={2}
-                max={20}
-                step={1}
-                value={classroomCount}
-                onChange={(e) => setClassroomCount(clampClassroomCount(e.target.value))}
-                className="w-16 border rounded-md px-2 py-1 text-right"
-                title="教室ガチャで生成する人数（2〜20）"
-              />
-              <span className="text-slate-500">人</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setClassroomCount(c => clampClassroomCount(c - 1))}
+                  className="px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-sm"
+                  >−</button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={2}
+                  max={20}
+                  step={1}
+                  value={classroomCount}
+                  onChange={(e) => setClassroomCount(clampClassroomCount(e.target.value))}
+                  className="w-16 border rounded-md px-2 py-1 text-center"
+                  />
+                <button
+                  type="button"
+                  onClick={() => setClassroomCount(c => clampClassroomCount(c + 1))}
+                  className="px-2 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-sm"
+                  >＋</button>
+                <span className="text-slate-500">人</span>
+              </div>
             </label>
 
             <button
