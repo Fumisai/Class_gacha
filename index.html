@@ -349,14 +349,27 @@ function renderRarityBadge(rarity) {
     };
   }
 
-  function runGacha(times) {
-    const tmp = [];
-    for (let i = 0; i < times; i++) {
-      const one = pickOne();
-      if (one) tmp.push(one);
+function runGacha(times) {
+  const tmp = [];
+  const usedNames = new Set();
+
+  for (let i = 0; i < times; i++) {
+    let one = null;
+    let safety = 0; // 無限ループ防止
+    while (safety < 50) {
+      one = pickOne();
+      if (one && !usedNames.has(one.name)) break;
+      safety++;
     }
-    if (tmp.length > 0) setResults(tmp);
+    if (one) {
+      tmp.push(one);
+      usedNames.add(one.name);
+    }
   }
+
+  if (tmp.length > 0) setResults(tmp);
+}
+
 
   // 指定の値が属するクラスのインデックスを返す（[x-0.9, x]）
   function findClassIndex(values, v) {
