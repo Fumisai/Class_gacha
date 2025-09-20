@@ -2,8 +2,7 @@
   "2018": [
     { "label": "小一", "path": "./folder/2018/R606.csv" },
     { "label": "高三", "path": "./folder/2018/H3017.csv" }
-  ]
- {
+  ],
   "2024": [
     { "label": "小一（女子）", "path": "./folder/2024/R606_f.csv", "gender": "female" },
     { "label": "小一（男子）", "path": "./folder/2024/R606_m.csv", "gender": "male" },
@@ -43,4 +42,3 @@
   ]
 }
 
-}
