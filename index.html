@@ -287,6 +287,25 @@ function App() {
     const rarity = rarityFromCellDisplay(chosen.displayValue);
     const name = FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
 
+  function renderRarityBadge(rarity) {
+    if (!rarity) return <span className="text-slate-400">—</span>;
+    const color =
+      rarity === "★"   ? "text-amber-600" :
+      rarity === "★★"  ? "text-rose-600"  :
+      rarity === "★★★" ? "text-indigo-600" :
+                        "text-slate-700";
+    return (
+      <span
+      className={`font-semibold ${color}`}
+      title={`レア度 ${rarity}`}
+      aria-label={`レア度 ${rarity.length} つ`}
+      >
+        {rarity}
+      </span>
+    );
+  }
+
+    
     return {
       name,
       height,
@@ -730,7 +749,7 @@ function App() {
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.height)}</td>
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.weight)}</td>
                       <td className="px-3 py-2 border-b text-right tabular-nums">{format1(r.rohrer)}</td>
-                      <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{r.rarity}</td>
+                      <td className="px-3 py-2 border-b text-center text-lg tracking-wide">{renderRarityBadge(r.rarity)}</td>
                       <td className="px-3 py-2 border-b text-center text-slate-500">{r.cellDisplay}</td>
                        <td className="px-3 py-2 border-b text-center">
                          <button
@@ -747,6 +766,16 @@ function App() {
               </tbody>
             </table>
           </div>
+          <div className="text-xs text-slate-600 flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-amber-600">★</span>ややレア</span>
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-rose-600">★★</span>レア</span>
+            <span className="flex items-center gap-1">
+              <span className="font-semibold text-indigo-600">★★★</span>激レア
+            </span>
+          </div>
+
         </section>
 
         {/* 手入力履歴（セッション内保持／リロードで消えます） */}
