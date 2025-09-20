@@ -162,6 +162,8 @@ function App() {
   const [presetPath, setPresetPath] = React.useState("");
   const [manifest, setManifest] = React.useState({});
   const [yearKey, setYearKey] = React.useState("");
+  const [source, setSource] = React.useState("");
+
 
  // ページ読込時に manifest.json を取得
   React.useEffect(() => {
@@ -204,6 +206,35 @@ function App() {
 
   React.useEffect(() => { runInternalTests(); }, []);
 
+
+
+  async function handleLoad() {
+  try {
+    if (source === "sample") {
+      ingestCsv(SAMPLE_CSV);
+      setMessage("サンプルCSVを読み込みました。");
+    } else if (source === "upload") {
+      if (!fileRef.current?.files?.[0]) {
+        setMessage("CSVファイルを選択してください。");
+      } else {
+        // 選択したファイルは handleFile で処理される
+        setMessage("アップロードCSVを選択しました。");
+      }
+    } else {
+      // 年度別のファイルを fetch
+      const res = await fetch(source);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      ingestCsv(text);
+      setMessage(`${source} を読み込みました。`);
+    }
+  } catch (e) {
+    setMessage(`読込エラー: ${e.message}`);
+  }
+}
+
+  
+  
   const meta = React.useMemo(() => {
     if (!table) return null;
     let knownSum = 0;
@@ -494,62 +525,57 @@ function renderRarityBadge(rarity) {
 
       <main className="max-w-6xl mx-auto p-4 space-y-6">
         {/* データの読み込み */}
+
         <section className="bg-white rounded-2xl shadow p-4 space-y-4">
-          <h2 className="text-lg font-semibold">データの読み込み</h2>
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".csv,text/csv"
-              onChange={handleFile}
-              className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-900 file:text-white hover:file:bg-slate-700"
-            />
-            <button
-              className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-sm"
-              onClick={handleLoadSample}
-              type="button"
-            >サンプルCSVを読み込む</button>
+  <h2 className="text-lg font-semibold">データの読み込み</h2>
+  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
 
+    {/* ソース選択 */}
+    <select
+      className="border rounded-xl px-3 py-2 text-sm bg-white"
+      value={source}
+      onChange={(e) => setSource(e.target.value)}
+    >
+      <option value="">データソースを選択</option>
+      <option value="upload">ファイルをアップロード</option>
+      <option value="sample">サンプルCSV</option>
+      {Object.keys(manifest).map(y => (
+        <optgroup key={y} label={`${y}年度`}>
+          {(manifest[y] || []).map((f, i) => (
+            <option key={i} value={f.path}>{f.label}</option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
 
- {/* 年度を選択 */}
- <select
-   className="border rounded-xl px-3 py-2 text-sm bg-white"
-   value={yearKey}
-   onChange={(e) => { setYearKey(e.target.value); setPresetPath(""); }}
-   title="年度を選択"
- >
-   <option value="">年度を選択</option>
-   {yearOptions.map(y => (
-     <option key={y} value={y}>{y}</option>
-   ))}
- </select>
+    {/* 読み込みボタン */}
+    <button
+      className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
+      onClick={handleLoad}
+      type="button"
+      disabled={!source}
+    >
+      読み込む
+    </button>
+  </div>
 
- {/* 年度に応じたファイルを選択 */}
- <select
-   className="border rounded-xl px-3 py-2 text-sm bg-white"
-   value={presetPath}
-   onChange={(e) => setPresetPath(e.target.value)}
-   title="ファイルを選択"
-   disabled={!yearKey || fileOptions.length === 0}
- >
-   <option value="">{yearKey ? "ファイルを選択" : "先に年度を選択"}</option>
-   {fileOptions.map((f, i) => (
-     <option key={i} value={f.path}>{f.label}</option>
-   ))}
- </select>
+  {/* ファイルアップロード UI は選択時だけ表示 */}
+  {source === "upload" && (
+    <input
+      ref={fileRef}
+      type="file"
+      accept=".csv,text/csv"
+      onChange={handleFile}
+      className="block w-full text-sm mt-2"
+    />
+  )}
 
-   <button
-     className="px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-sm"
-     onClick={handleLoadPreset}
-     type="button"
-     disabled={!presetPath}
-   >選択したCSVを読み込む</button>
-            <button
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-sm"
-              onClick={() => { if (rawCsv) ingestCsv(rawCsv); }}
-              type="button"
-            >CSVを再解析</button>
-          </div>
+  {message && (
+    <div className="text-sm text-slate-700 bg-slate-100 rounded-xl px-3 py-2 inline-block mt-2">
+      {message}
+    </div>
+  )}
+</section>
 
           <details className="text-sm text-slate-600">
             <summary className="cursor-pointer select-none py-1">CSVフォーマットの説明（クリックで開く）</summary>
