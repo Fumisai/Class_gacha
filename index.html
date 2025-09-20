@@ -312,23 +312,63 @@ function App() {
       }
     } else {
   const srcObj = JSON.parse(source); // { label, female, male }
-  const [femaleRes, maleRes] = await Promise.all([
-    fetch(srcObj.female.path),
-    fetch(srcObj.male.path)
-  ]);
-  if (!femaleRes.ok || !maleRes.ok) throw new Error("CSV取得失敗");
+ async function handleLoad() {
+  try {
+    if (source === "sample") {
+      ingestCsv(SAMPLE_CSV);
+      setMessage("サンプルCSVを読み込みました。");
+    } else if (source === "upload") {
+      if (!fileRef.current?.files?.[0]) {
+        setMessage("CSVファイルを選択してください。");
+      } else {
+        setMessage("アップロードCSVを選択しました。");
+      }
+    } else {
+      const srcObj = JSON.parse(source); // { label, female, male }
 
-  const [femaleCsv, maleCsv] = await Promise.all([
-    femaleRes.text(),
-    maleRes.text()
-  ]);
+      let femaleTable = null;
+      let maleTable = null;
 
-  const femaleTable = ingestCsv(femaleCsv, "female", { returnOnly: true });
-  const maleTable   = ingestCsv(maleCsv, "male", { returnOnly: true });
+      if (srcObj.female?.path) {
+        try {
+          const res = await fetch(srcObj.female.path);
+          if (res.ok) {
+            const text = await res.text();
+            femaleTable = ingestCsv(text, "female", { returnOnly: true });
+          }
+        } catch {}
+      }
 
-  setTable({ female: femaleTable, male: maleTable });
-  setResults([]);
-  setMessage(`${srcObj.label} の男女CSVを読み込みました。`);
+      if (srcObj.male?.path) {
+        try {
+          const res = await fetch(srcObj.male.path);
+          if (res.ok) {
+            const text = await res.text();
+            maleTable = ingestCsv(text, "male", { returnOnly: true });
+          }
+        } catch {}
+      }
+
+      if (femaleTable && maleTable) {
+        setTable({ female: femaleTable, male: maleTable });
+        setMessage(`${srcObj.label} の男女CSVを読み込みました。`);
+      } else if (femaleTable) {
+        setTable(femaleTable);
+        setMessage(`${srcObj.label} は女子データのみ読み込みました。男子は生成されません。`);
+      } else if (maleTable) {
+        setTable(maleTable);
+        setMessage(`${srcObj.label} は男子データのみ読み込みました。女子は生成されません。`);
+      } else {
+        throw new Error("男女どちらのCSVも読み込めませんでした");
+      }
+
+      setResults([]);
+    }
+  } catch (e) {
+    setMessage(`読込エラー: ${e.message}`);
+  }
+}
+
 }
 
 
@@ -466,13 +506,20 @@ function renderRarityBadge(rarity) {
   }
 
 function runGacha(times) {
-  if (!table?.female || !table?.male) {
-    setMessage("男女両方のCSVを読み込んでください。");
+  let femaleCount = 0, maleCount = 0;
+
+  if (table.female && table.male) {
+    // 男女揃っている場合
+    femaleCount = Math.round(times * femaleRatio / 100);
+    maleCount   = times - femaleCount;
+  } else if (table.gender === "female") {
+    femaleCount = times; // 女子のみ100%
+  } else if (table.gender === "male") {
+    maleCount = times;   // 男子のみ100%
+  } else {
+    setMessage("有効なデータがありません。");
     return;
   }
-
-  const femaleCount = Math.round(times * femaleRatio / 100);
-  const maleCount   = times - femaleCount;
 
   const tmp = [];
   const usedNames = new Set();
@@ -499,6 +546,7 @@ function runGacha(times) {
 
   if (tmp.length > 0) setResults(tmp);
 }
+
 
 
 
