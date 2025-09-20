@@ -315,7 +315,7 @@ function renderRarityBadge(rarity) {
   function rohrerCategoryColor(rohrer) {
   if (rohrer < 100) return "text-sky-600 font-semibold";      // かなりやせ
   if (rohrer < 115) return "text-teal-600 font-semibold";     // やせ
-  if (rohrer < 145) return "text-emerald-600 font-semibold";  // 標準
+  if (rohrer < 145) return "";  // 標準
   if (rohrer < 160) return "text-amber-600 font-semibold";    // ややふとり
   return "text-rose-600 font-semibold";                       // ふとり
 }
@@ -770,7 +770,7 @@ function runGacha(times) {
             <div className="mt-2 flex flex-col gap-1">
               <span><span className="font-semibold text-sky-600">かなりやせ</span> （&lt;100）</span>
                 <span><span className="font-semibold text-teal-600">やせ</span> （100〜114）</span>
-                <span><span className="font-semibold text-emerald-600">標準</span> （115〜144）</span>
+                <span><span className="font-semibold text-Black-600">標準</span> （115〜144）</span>
                 <span><span className="font-semibold text-amber-600">ふとり</span> （145〜159）</span>
                 <span><span className="font-semibold text-rose-600">ふとりすぎ</span> （160以上）</span>
               </div>
@@ -816,7 +816,7 @@ function runGacha(times) {
                            onClick={() => openGoogleFor(r)}
                            title="(身長cm 体重kg) でGoogle検索"
                            >
-                           Googleで検索+     </button>
+                           検索+     </button>
                        </td>
                     </tr>
                   ))
