@@ -187,6 +187,41 @@ function stddev(arr) {
   return Math.sqrt(variance);
 }
 
+function renderTable(tbl, label) {
+  if (!tbl) return null;
+  return (
+    <div className="mb-6">
+      {label && <h3 className="font-medium text-slate-700 mb-2">{label}</h3>}
+      <table className="text-xs border min-w-full">
+        <thead>
+          <tr>
+            <th className="border px-2 py-1 bg-slate-100 text-left">身長×体重</th>
+            {tbl.weights.map((w, i) => (
+              <th key={i} className="border px-2 py-1 bg-slate-100 text-right">{w}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tbl.heights.map((h, ri) => (
+            <tr key={ri}>
+              <td className="border px-2 py-1 bg-slate-50 text-right font-medium">{h}</td>
+              {tbl.cells[ri].map((c, ci) => (
+                <td
+                  key={ci}
+                  className={`border px-2 py-1 text-right tabular-nums ${
+                    c.display === "-" ? "text-slate-400" : ""
+                  }`}
+                >
+                  {c.display}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 
       
@@ -1117,37 +1152,21 @@ setMessage("CSVを読み込みました。");
 
         {/* データプレビュー（任意） */}
         {table && (
-          <section className="bg-white rounded-2xl shadow p-4 space-y-3">
-            <h2 className="text-lg font-semibold">読み込んだ頻度表（‰）</h2>
-            <div className="overflow-x-auto">
-              <table className="text-xs border min-w-full">
-                <thead>
-                  <tr>
-                    <th className="border px-2 py-1 bg-slate-100 text-left">身長×体重</th>
-                    {table.weights.map((w, i) => (
-                      <th key={i} className="border px-2 py-1 bg-slate-100 text-right">{w}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.heights.map((h, ri) => (
-                    <tr key={ri}>
-                      <td className="border px-2 py-1 bg-slate-50 text-right font-medium">{h}</td>
-                      {table.cells[ri].map((c, ci) => (
-                        <td
-                          key={ci}
-                          className={`border px-2 py-1 text-right tabular-nums ${c.display === '-' ? 'text-slate-400' : ''}`}
-                        >
-                          {c.display}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+  <section className="bg-white rounded-2xl shadow p-4 space-y-3">
+    <h2 className="text-lg font-semibold">読み込んだ頻度表（‰）</h2>
+    <div className="overflow-x-auto">
+      {table.female || table.male ? (
+        <>
+          {table.female && renderTable(table.female, "女子")}
+          {table.male && renderTable(table.male, "男子")}
+        </>
+      ) : (
+        renderTable(table, "")
+      )}
+    </div>
+  </section>
+)}
+
 
         <section className="text-xs text-slate-500 leading-6">
           <p>・本アプリは統計的頻度表に基づくフィクション生成です。個人の実在性はありません。</p>
