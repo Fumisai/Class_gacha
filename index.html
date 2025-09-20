@@ -631,9 +631,16 @@ function runGacha(times) {
         cells.push(rowCells);
       }
 
-      setTable(parsed);
-    setResults([]);
-    setMessage("CSVを読み込みました。");
+      const parsed = { heights, weights: weightLabels, cells, gender };
+
+if (opts.returnOnly) {
+  return parsed;   // 呼び出し元に返す
+}
+
+setTable(parsed);
+setResults([]);
+setMessage("CSVを読み込みました。");
+
   } catch (err) {
     if (opts.returnOnly) throw err; // 呼び出し元にエラーを投げる
     setMessage(`CSV読込エラー: ${err.message || err}`);
