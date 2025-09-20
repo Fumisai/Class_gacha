@@ -4,41 +4,66 @@
     { "label": "高三", "path": "./folder/2018/H3017.csv" }
   ],
   "2024": [
-    { "label": "小一（女子）", "path": "./folder/2024/R606_f.csv", "gender": "female" },
-    { "label": "小一（男子）", "path": "./folder/2024/R606_m.csv", "gender": "male" },
-
-    { "label": "小二（女子）", "path": "./folder/2024/R607_f.csv", "gender": "female" },
-    { "label": "小二（男子）", "path": "./folder/2024/R607_m.csv", "gender": "male" },
-
-    { "label": "小三（女子）", "path": "./folder/2024/R608_f.csv", "gender": "female" },
-    { "label": "小三（男子）", "path": "./folder/2024/R608_m.csv", "gender": "male" },
-
-    { "label": "小四（女子）", "path": "./folder/2024/R609_f.csv", "gender": "female" },
-    { "label": "小四（男子）", "path": "./folder/2024/R609_m.csv", "gender": "male" },
-
-    { "label": "小五（女子）", "path": "./folder/2024/R610_f.csv", "gender": "female" },
-    { "label": "小五（男子）", "path": "./folder/2024/R610_m.csv", "gender": "male" },
-
-    { "label": "小六（女子）", "path": "./folder/2024/R611_f.csv", "gender": "female" },
-    { "label": "小六（男子）", "path": "./folder/2024/R611_m.csv", "gender": "male" },
-
-    { "label": "中一（女子）", "path": "./folder/2024/R612_f.csv", "gender": "female" },
-    { "label": "中一（男子）", "path": "./folder/2024/R612_m.csv", "gender": "male" },
-
-    { "label": "中二（女子）", "path": "./folder/2024/R613_f.csv", "gender": "female" },
-    { "label": "中二（男子）", "path": "./folder/2024/R613_m.csv", "gender": "male" },
-
-    { "label": "中三（女子）", "path": "./folder/2024/R614_f.csv", "gender": "female" },
-    { "label": "中三（男子）", "path": "./folder/2024/R614_m.csv", "gender": "male" },
-
-    { "label": "高一（女子）", "path": "./folder/2024/R615_f.csv", "gender": "female" },
-    { "label": "高一（男子）", "path": "./folder/2024/R615_m.csv", "gender": "male" },
-
-    { "label": "高二（女子）", "path": "./folder/2024/R616_f.csv", "gender": "female" },
-    { "label": "高二（男子）", "path": "./folder/2024/R616_m.csv", "gender": "male" },
-
-    { "label": "高三（女子）", "path": "./folder/2024/R617_f.csv", "gender": "female" },
-    { "label": "高三（男子）", "path": "./folder/2024/R617_m.csv", "gender": "male" }
+    {
+      "label": "小一",
+      "female": { "path": "./folder/2024/R606_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R606_m.csv", "gender": "male" }
+    },
+    {
+      "label": "小二",
+      "female": { "path": "./folder/2024/R607_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R607_m.csv", "gender": "male" }
+    },
+    {
+      "label": "小三",
+      "female": { "path": "./folder/2024/R608_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R608_m.csv", "gender": "male" }
+    },
+    {
+      "label": "小四",
+      "female": { "path": "./folder/2024/R609_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R609_m.csv", "gender": "male" }
+    }
+    {
+      "label": "小五",
+      "female": { "path": "./folder/2024/R10_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R610_m.csv", "gender": "male" }
+    },
+    {
+      "label": "小六",
+      "female": { "path": "./folder/2024/R611_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R611_m.csv", "gender": "male" }
+    },
+    {
+      "label": "中一",
+      "female": { "path": "./folder/2024/R612_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R612_m.csv", "gender": "male" }
+    },
+    {
+      "label": "中二",
+      "female": { "path": "./folder/2024/R613_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R613_m.csv", "gender": "male" }
+    },
+    {
+      "label": "中三",
+      "female": { "path": "./folder/2024/R614_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R614_m.csv", "gender": "male" }
+    },
+    {
+      "label": "高一",
+      "female": { "path": "./folder/2024/R615_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R615_m.csv", "gender": "male" }
+    },
+    {
+      "label": "高二",
+      "female": { "path": "./folder/2024/R616_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R616_m.csv", "gender": "male" }
+    },
+    {
+      "label": "高三",
+      "female": { "path": "./folder/2024/R617_f.csv", "gender": "female" },
+      "male":   { "path": "./folder/2024/R617_m.csv", "gender": "male" }
+    }
   ]
 }
 
