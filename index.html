@@ -782,30 +782,37 @@ setMessage("CSVを読み込みました。");
           )}
 
           {table && (
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <div className="bg-slate-50 rounded-2xl p-3 border">
-                <div className="text-slate-500">行（身長クラス）</div>
-                <div className="text-xl font-semibold">{table.heights.length} 行</div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-3 border">
-                <div className="text-slate-500">列（体重クラス）</div>
-                <div className="text-xl font-semibold">{table.weights.length} 列</div>
-              </div>
-              <div className="bg-slate-50 rounded-2xl p-3 border">
-                <div className="text-slate-500">抽選用 合計‰</div>
-                <div className="text-xl font-semibold">{format1(totalWeight)}</div>
-                {meta && (
-                  <div className="text-xs text-slate-500 mt-1">
-                    既知合計: {format1(meta.knownSum)}‰ / 0.0セル: {meta.zeroDotZeroCount} / 0.0配分: {format1(meta.perZeroDotZero)}‰/セル
-                    {meta.sumIfAssigned > 1000 && (
-                      <span className="ml-2 inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-800">合計が1000‰を超過（最低0.01‰保証のため）</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
+  <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+    {table.female || table.male ? (
+      <>
+        <div className="bg-slate-50 rounded-2xl p-3 border">
+          <div className="text-slate-500">女子 行数</div>
+          <div className="text-xl font-semibold">
+            {table.female ? table.female.heights.length : 0} 行
+          </div>
+        </div>
+        <div className="bg-slate-50 rounded-2xl p-3 border">
+          <div className="text-slate-500">男子 行数</div>
+          <div className="text-xl font-semibold">
+            {table.male ? table.male.heights.length : 0} 行
+          </div>
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="bg-slate-50 rounded-2xl p-3 border">
+          <div className="text-slate-500">行（身長クラス）</div>
+          <div className="text-xl font-semibold">{table.heights.length} 行</div>
+        </div>
+        <div className="bg-slate-50 rounded-2xl p-3 border">
+          <div className="text-slate-500">列（体重クラス）</div>
+          <div className="text-xl font-semibold">{table.weights.length} 列</div>
+        </div>
+      </>
+    )}
+  </div>
+)}
+
 
         {/* ガチャ */}
         <section className="bg-white rounded-2xl shadow p-4 space-y-4">
