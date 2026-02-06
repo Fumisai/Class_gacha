@@ -249,6 +249,12 @@ function App() {
   const [femaleRatio, setFemaleRatio] = React.useState(50); // 初期値 50%: 男女半々
   const [minHeightFilter, setMinHeightFilter] = React.useState("");
   const [maxHeightFilter, setMaxHeightFilter] = React.useState("");
+  const filterActive =
+  minHeightFilter !== "" &&
+  maxHeightFilter !== "" &&
+  Number.isInteger(hMin) &&
+  Number.isInteger(hMax) &&
+  hMin <= hMax;
   
  // ページ読込時に manifest.json を取得
   React.useEffect(() => {
@@ -397,8 +403,6 @@ const weightedItems = React.useMemo(() => {
   if (!table || !meta) return [];
 
 
-  const hMin = Number(minHeightFilter);
-  const hMax = Number(maxHeightFilter);
 
   const useFilter =
   minHeightFilter !== "" &&
@@ -425,9 +429,9 @@ const weightedItems = React.useMemo(() => {
         if (w > 0) {
           const heightClass = tbl.heights[ri];
 
-        if (useFilter) {
-          if (heightClass < hMin || heightClass > hMax) continue;
-          }
+        if (filterActive) {
+  if (heightClass < hMin || heightClass > hMax) continue;
+}
           items.push({
             rIndex: ri,
             cIndex: ci,
