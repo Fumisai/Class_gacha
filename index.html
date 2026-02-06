@@ -428,7 +428,7 @@ const weightedItems = React.useMemo(() => {
 
         if (useHeightFilter) {
           if (
-            heightClass < filterMinClass ||
+            heightClass <= filterMinClass ||
             heightClass > filterMaxClass
           ) continue;
         }
