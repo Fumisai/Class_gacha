@@ -455,12 +455,7 @@ const weightedItems = React.useMemo(() => {
   return allItems;
 }, [table, meta, femaleRatio, minHeightFilter, maxHeightFilter]);
 
-const filterActive =
-  minHeightFilter !== "" &&
-  maxHeightFilter !== "" &&
-  Number.isInteger(hMin) &&
-  Number.isInteger(hMax) &&
-  hMin <= hMax;
+
 
 
   const totalWeight = React.useMemo(() => weightedItems.reduce((a, b) => a + b.weightPerMille, 0), [weightedItems]);
