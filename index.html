@@ -100,7 +100,7 @@ function clampClassroomCount(n) {
   return Math.min(40, Math.max(1, num));
 }
 
-const FEMALE_NAMES = ["葵","茜","明日香","彩","綾","あかね","あすか","あや","歩美","文","咲","桜","さくら","早苗","さなえ","沙耶","汐里","志穂","静香","しずか","渚","七海","奈々","なな","夏希","夏美","直子","奈緒子","なおこ","菜月","菜々子","成美","のぞみ","遥","はるか","春菜","陽菜","ひな","日菜子","日向","ひより","ひかり","光","美咲","美月","美穂","美和","瑞希","みずき","みどり","みなみ","南香","実花","実里","美琴","美羽","美雨","芽衣","めい","桃","百花","百合","ゆり","優","優衣","優花","夕菜","結衣","結","結愛","ゆあ","由衣","唯","唯奈","由佳","由香","由美","友香","友里","友美","梨花","凛","りん","鈴","涼","涼子","りょう","玲","怜","麗","れい","怜奈","澪","みお","美緒","萌","萌花","桃子","麻衣","舞","真央","真奈","真菜美","真由","真理","万里","万由","真琴","真希","真弓","栞","しおり","志保","詩織","聖","聖奈","清美","清香","佳奈","佳苗","香苗","香織","かおり","香澄","かすみ","楓","かえで","花","花音","華","華子","葉月","遥香","晴香","陽子","陽未","陽向","小春","心愛","心音","心美","小百合","紗季","紗耶香","紗月","さつき","沙羅","白雪","千夏","千尋","千鶴","智子","智美","智香","知里","知美","知佳","弥生","弓香","由宇","有栖","ありす","亜衣","愛","あい","愛花","愛美","藍","藍子","亜美","彩乃","彩花","彩香","彩芽","杏","あん","杏奈","杏子","杏里","遙","里奈","りな","莉子","りこ","莉央","りりか","莉緒","梨央","梨緒","璃子","瑠璃","瑛美","映美","絵里","恵","恵美","英里","直美","直実","奈緒","夏海","望","ののか","穂香","ほのか","穂乃果","澄玲","朱里","朱音"];
+const FEMALE_NAMES = ["葵","茜","明日香","彩","綾","あかね","あすか","あや","歩美","文","咲","桜","さくら","早苗","さなえ","沙耶","汐里","志穂","静香","しずか","渚","七海","奈々","なな","夏希","夏美","直子","奈緒子","なおこ","菜月","菜々子","成美","のぞみ","遥","はるか","春菜","春菜","陽菜","ひな","日菜子","日向","ひより","ひかり","光","美咲","美月","美穂","美和","瑞希","みずき","みどり","みなみ","南香","実花","実里","美琴","美羽","美雨","芽衣","めい","桃","百花","百合","ゆり","優","優衣","優花","夕菜","結衣","結","結愛","ゆあ","由衣","唯","唯奈","由佳","由香","由美","友香","友里","友美","梨花","凛","りん","鈴","涼","涼子","りょう","玲","怜","麗","れい","怜奈","澪","みお","美緒","萌","萌花","桃子","麻衣","舞","真央","真奈","真菜美","真由","真理","万里","万由","真琴","真希","真弓","栞","しおり","志保","詩織","聖","聖奈","清美","清香","佳奈","佳苗","香苗","香織","かおり","香澄","かすみ","楓","かえで","花","花音","華","華子","葉月","遥香","晴香","陽子","陽未","陽向","小春","小百合","紗季","紗耶香","紗月","さつき","沙羅","白雪","千夏","千尋","千鶴","智子","智美","智香","知里","知美","知佳","弥生","弓香","由宇","有栖","ありす","亜衣","愛","あい","愛花","愛美","藍","藍子","亜美","彩乃","彩花","彩香","彩芽","杏","あん","杏奈","杏子","杏里","遙","里奈","りな","莉子","りこ","莉央","りりか","莉緒","梨央","梨緒","璃子","瑠璃","瑛美","映美","絵里","恵","恵美","英里","直美","直実","奈緒","夏海","望","ののか","穂香","ほのか","穂乃果","澄玲","朱里","朱音"];
 const MALE_NAMES = [
   // 農民・庶民風（素朴な名）
   "太郎", "次郎", "三郎", "四郎", "五郎",
@@ -247,7 +247,9 @@ function App() {
   const [yearKey, setYearKey] = React.useState("");
   const [source, setSource] = React.useState("");
   const [femaleRatio, setFemaleRatio] = React.useState(50); // 初期値 50%: 男女半々
-
+  const [minHeightFilter, setMinHeightFilter] = React.useState("");
+  const [maxHeightFilter, setMaxHeightFilter] = React.useState("");
+  
  // ページ読込時に manifest.json を取得
   React.useEffect(() => {
   (async () => {
@@ -394,6 +396,17 @@ function App() {
 const weightedItems = React.useMemo(() => {
   if (!table || !meta) return [];
 
+
+  const hMin = Number(minHeightFilter);
+  const hMax = Number(maxHeightFilter);
+
+  const useFilter =
+  minHeightFilter !== "" &&
+  maxHeightFilter !== "" &&
+  Number.isInteger(hMin) &&
+  Number.isInteger(hMax) &&
+  hMin <= hMax;
+  
   const collectItems = (tbl, factor) => {
     const items = [];
     for (let ri = 0; ri < tbl.heights.length; ri++) {
@@ -410,6 +423,11 @@ const weightedItems = React.useMemo(() => {
           w = n;
         }
         if (w > 0) {
+          const heightClass = tbl.heights[ri];
+
+        if (useFilter) {
+          if (heightClass < hMin || heightClass > hMax) continue;
+          }
           items.push({
             rIndex: ri,
             cIndex: ci,
@@ -431,9 +449,14 @@ const weightedItems = React.useMemo(() => {
   if (table.male)   allItems = allItems.concat(collectItems(table.male,   maleFactor));
 
   return allItems;
-}, [table, meta, femaleRatio]);
+}, [table, meta, femaleRatio, minHeightFilter, maxHeightFilter]);
 
-
+const filterActive =
+  minHeightFilter !== "" &&
+  maxHeightFilter !== "" &&
+  Number.isInteger(hMin) &&
+  Number.isInteger(hMax) &&
+  hMin <= hMax;
 
 
   const totalWeight = React.useMemo(() => weightedItems.reduce((a, b) => a + b.weightPerMille, 0), [weightedItems]);
@@ -518,10 +541,10 @@ function renderRarityBadge(rarity) {
 
 
 function runGacha(times) {
-  if (!table || weightedItems.length === 0) {
-    setMessage("有効なデータがありません。");
-    return;
-  }
+  if (weightedItems.length === 0) {
+  setMessage("指定範囲に該当データがありません。");
+  return;
+}
 
   const tmp = [];
   const usedNames = new Set();
@@ -885,6 +908,38 @@ setMessage("CSVを読み込みました。");
               disabled={!table}
               title={`${clampClassroomCount(classroomCount)}人を一括生成`}
             >教室ガチャ（{clampClassroomCount(classroomCount)}人分）</button>
+            <div className="flex gap-2 items-center text-sm bg-slate-50 border rounded-xl px-3 py-2">
+
+{filterActive && (
+  <div className="text-xs text-indigo-600">
+    身長 {hMin}〜{hMax}cm で抽選中
+  </div>
+)}
+              
+  <span>身長フィルタ（任意）</span>
+
+  <input
+    type="number"
+    step="1"
+    min="0"
+    placeholder="最小"
+    value={minHeightFilter}
+    onChange={(e) => setMinHeightFilter(e.target.value)}
+    className="w-20 border rounded px-2 py-1"
+  />
+
+  <span>〜</span>
+
+  <input
+    type="number"
+    step="1"
+    min="0"
+    placeholder="最大"
+    value={maxHeightFilter}
+    onChange={(e) => setMaxHeightFilter(e.target.value)}
+    className="w-20 border rounded px-2 py-1"
+  />
+</div>
             
             {/* 男女比スライダー */}
             {table?.female && table?.male ? (
